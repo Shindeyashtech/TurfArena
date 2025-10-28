@@ -134,15 +134,15 @@ const TurfBookings = () => {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="flex items-center space-x-2">
                     <User size={16} className="text-gray-500" />
-                    <span>{booking.customerDetails?.name || booking.user.name}</span>
+                    <span>{booking.customerDetails?.name || booking.user?.name || 'N/A'}</span>
                   </div>
                   <div className="flex items-center space-x-2">
                     <Mail size={16} className="text-gray-500" />
-                    <span>{booking.customerDetails?.email || booking.user.email}</span>
+                    <span>{booking.customerDetails?.email || booking.user?.email || 'N/A'}</span>
                   </div>
                   <div className="flex items-center space-x-2">
                     <Phone size={16} className="text-gray-500" />
-                    <span>{booking.customerDetails?.phone || booking.user.phone || 'N/A'}</span>
+                    <span>{booking.customerDetails?.phone || booking.user?.phone || 'N/A'}</span>
                   </div>
                 </div>
               </div>
@@ -156,6 +156,43 @@ const TurfBookings = () => {
                   </div>
                   <div>
                     <span className="font-medium">Slots:</span> {booking.slots.length} hour{booking.slots.length > 1 ? 's' : ''}
+                  </div>
+                </div>
+
+                {/* Receipt Section */}
+                <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                  <h5 className="font-semibold mb-2">Receipt</h5>
+                  <div className="space-y-1 text-sm">
+                    <div className="flex justify-between">
+                      <span>Booking ID:</span>
+                      <span className="font-mono">#{booking._id.slice(-8)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Customer:</span>
+                      <span>{booking.customerDetails?.name || booking.user?.name || 'N/A'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Date:</span>
+                      <span>{new Date(booking.bookingDate).toLocaleDateString()}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Time Slots:</span>
+                      <span>{booking.slots.map(slot => `${slot.startTime}-${slot.endTime}`).join(', ')}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Duration:</span>
+                      <span>{booking.slots.length} hour{booking.slots.length > 1 ? 's' : ''}</span>
+                    </div>
+                    <div className="flex justify-between font-semibold border-t pt-2 mt-2">
+                      <span>Total Amount:</span>
+                      <span>₹{booking.totalAmount}</span>
+                    </div>
+                    <div className="flex justify-between text-xs text-gray-500">
+                      <span>Status:</span>
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(booking.status)}`}>
+                        {booking.status}
+                      </span>
+                    </div>
                   </div>
                 </div>
 

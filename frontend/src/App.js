@@ -4,6 +4,7 @@ import { AuthProvider } from './context/AuthContext';
 import { SocketProvider } from './context/SocketContext';
 import Navbar from './components/Navbar';
 import PrivateRoute from './components/PrivateRoute';
+import NotificationPopup from './components/NotificationPopup';
 
 // Pages
 import Login from './pages/Login';
@@ -43,6 +44,7 @@ function App() {
         <SocketProvider>
           <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white transition-colors duration-300">
             <Navbar />
+            <NotificationPopup />
             <Routes>
               {/* Public Routes */}
               <Route path="/login" element={<Login />} />
@@ -51,7 +53,7 @@ function App() {
               <Route path="/turfs" element={<TurfsList />} />
               <Route path="/turfs/:id" element={<TurfDetails />} />
               <Route
-                path="/turfs/:id/bookings"
+                path="/turf-bookings/:id"
                 element={
                   <PrivateRoute requiredRole="turf_owner">
                     <TurfBookings />

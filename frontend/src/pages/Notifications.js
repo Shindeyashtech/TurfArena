@@ -3,12 +3,14 @@ import React, { useState, useEffect } from 'react';
 import { Bell, Check, Trash2, Trophy, Users, Calendar, DollarSign } from 'lucide-react';
 import { getNotifications, markNotificationRead, markAllNotificationsRead } from '../utils/api';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 const Notifications = () => {
   const [notifications, setNotifications] = useState([]);
   const [filter, setFilter] = useState('all');
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   useEffect(() => {
     fetchNotifications();
@@ -73,6 +75,25 @@ const Notifications = () => {
     }
   };
 
+  // Filter notifications based on user role
+  const getFilteredNotifications = () => {
+    let filtered = notifications;
+
+    if (filter === 'unread') {
+      filtered = filtered.filter(n => !n.isRead);
+    } else if (filter !== 'all') {
+      filtered = filtered.filter(n => n.type === filter);
+    }
+
+    // For turf owners, hide match_invite and team_request notifications
+    if (user?.role === 'turf_owner') {
+      filtered = filtered.filter(n => !['match_invite', 'team_request'].includes(n.type));
+    }
+
+    return filtered;
+  };
+
+  const filteredNotifications = getFilteredNotifications();
   const unreadCount = notifications.filter(n => !n.isRead).length;
 
   if (loading) {
@@ -110,31 +131,45 @@ const Notifications = () => {
 
         {/* Filter Tabs */}
         <div className="flex space-x-2 bg-white dark:bg-gray-800 rounded-lg p-1 shadow">
-          {['all', 'unread', 'match_invite', 'booking_confirmation', 'new_booking'].map((filterType) => (
-            <button
-              key={filterType}
-              onClick={() => setFilter(filterType)}
-              className={`flex-1 px-4 py-2 rounded-lg transition ${
-                filter === filterType
-                  ? 'bg-gradient-to-r from-green-500 to-blue-500 text-white'
-                  : 'hover:bg-gray-100 dark:hover:bg-gray-700'
-              }`}
-            >
-              {filterType.replace('_', ' ').charAt(0).toUpperCase() + filterType.slice(1).replace('_', ' ')}
-            </button>
-          ))}
+          {user?.role === 'turf_owner'
+            ? ['all', 'unread'].map((filterType) => (
+                <button
+                  key={filterType}
+                  onClick={() => setFilter(filterType)}
+                  className={`flex-1 px-4 py-2 rounded-lg transition ${
+                    filter === filterType
+                      ? 'bg-gradient-to-r from-green-500 to-blue-500 text-white'
+                      : 'hover:bg-gray-100 dark:hover:bg-gray-700'
+                  }`}
+                >
+                  {filterType.replace('_', ' ').charAt(0).toUpperCase() + filterType.slice(1).replace('_', ' ')}
+                </button>
+              ))
+            : ['all', 'unread', 'match_invite', 'booking_confirmation', 'new_booking'].map((filterType) => (
+                <button
+                  key={filterType}
+                  onClick={() => setFilter(filterType)}
+                  className={`flex-1 px-4 py-2 rounded-lg transition ${
+                    filter === filterType
+                      ? 'bg-gradient-to-r from-green-500 to-blue-500 text-white'
+                      : 'hover:bg-gray-100 dark:hover:bg-gray-700'
+                  }`}
+                >
+                  {filterType.replace('_', ' ').charAt(0).toUpperCase() + filterType.slice(1).replace('_', ' ')}
+                </button>
+              ))}
         </div>
       </div>
 
       {/* Notifications List */}
       <div className="space-y-3">
-        {notifications.length === 0 ? (
+        {filteredNotifications.length === 0 ? (
           <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-lg">
             <Bell className="mx-auto text-gray-400 mb-4" size={48} />
             <p className="text-gray-500">No notifications</p>
           </div>
         ) : (
-          notifications.map((notification) => (
+          filteredNotifications.map((notification) => (
             <div
               key={notification._id}
               onClick={() => handleNotificationClick(notification)}
