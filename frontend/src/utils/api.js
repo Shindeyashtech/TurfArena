@@ -4,6 +4,18 @@ import axios from 'axios';
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
 axios.defaults.baseURL = API_URL;
+axios.defaults.timeout = 10000; // 10 second timeout
+
+// Add response interceptor for better error handling
+axios.interceptors.response.use(
+  response => response,
+  error => {
+    if (error.code === 'ECONNABORTED') {
+      console.error('Request timeout');
+    }
+    return Promise.reject(error);
+  }
+);
 
 // Turfs
 export const getTurfs = (params) => axios.get('/api/turfs', { params });

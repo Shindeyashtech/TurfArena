@@ -63,9 +63,7 @@ router.post('/', protect, async (req, res) => {
         turfSlot.isBooked = true;
         turfSlot.bookingId = booking._id;
       }
-    });
-
-    await turfDoc.save();
+    });    await turfDoc.save();
 
     // Send notification to turf owner
     if (turfDoc.owner) {
@@ -83,6 +81,21 @@ router.post('/', protect, async (req, res) => {
           totalAmount: totalAmount
         }
       });
+
+      // Emit real-time socket event to turf owner
+      const io = req.app.get('io');
+      if (io) {
+        io.to(turfDoc.owner.toString()).emit('new-booking', {
+          _id: booking._id,
+          turf: turf,
+          bookingDate: bookingDate,
+          slots: slots,
+          totalAmount: totalAmount,
+          customerDetails: customerDetails,
+          status: 'pending',
+          createdAt: booking.createdAt
+        });
+      }
     }
 
     res.status(201).json({ success: true, booking });
@@ -173,32 +186,40 @@ router.put('/:id/confirm', protect, async (req, res) => {
 // @access  Private
 router.put('/:id/cancel', protect, async (req, res) => {
   try {
-    const booking = await Booking.findById(req.params.id);
+    const booking = await Booking.findById(req.params.id).populate('turf');
 
     if (!booking) {
       return res.status(404).json({ message: 'Booking not found' });
     }
 
-    if (booking.user.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ message: 'Not authorized' });
+    // Check authorization: either the user who made the booking OR the turf owner
+    const isTurfOwner = booking.turf.owner && booking.turf.owner.toString() === req.user._id.toString();
+    const isBookingUser = booking.user.toString() === req.user._id.toString();
+
+    if (!isBookingUser && !isTurfOwner && req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Not authorized to cancel this booking' });
     }
 
     if (booking.status === 'completed' || booking.status === 'cancelled') {
-      return res.status(400).json({ message: 'Cannot cancel this booking' });
+      return res.status(400).json({ message: 'Cannot cancel this booking - already ' + booking.status });
     }
 
-    // Check if booking is within cancellation window (e.g., 24 hours before)
-    const bookingTime = new Date(booking.bookingDate);
-    const now = new Date();
-    const hoursDifference = (bookingTime - now) / (1000 * 60 * 60);
+    // Only enforce 24-hour restriction for regular users, not turf owners
+    if (!isTurfOwner && req.user.role !== 'admin') {
+      const bookingTime = new Date(booking.bookingDate);
+      const now = new Date();
+      const hoursDifference = (bookingTime - now) / (1000 * 60 * 60);
 
-    if (hoursDifference < 24) {
-      return res.status(400).json({
-        message: 'Cannot cancel booking less than 24 hours before booking time'
-      });
+      if (hoursDifference < 24) {
+        return res.status(400).json({
+          message: 'Cannot cancel booking less than 24 hours before booking time'
+        });
+      }
     }
 
     booking.status = 'cancelled';
+    booking.cancelledAt = new Date();
+    booking.cancelledBy = req.user._id;
     await booking.save();
 
     // Free up the slots in turf
@@ -218,18 +239,36 @@ router.put('/:id/cancel', protect, async (req, res) => {
         }
       });
       await turf.save();
-    }
-
-    // Send cancellation notification
+    }    // Send cancellation notification
+    const cancelledByOwner = isTurfOwner || req.user.role === 'admin';
+    
+    // Notify the customer
     await Notification.create({
-      user: req.user._id,
+      user: booking.user,
       type: 'booking_confirmation',
-      title: 'Booking Cancelled',
-      message: `Your booking at ${turf.name} has been cancelled`,
+      title: cancelledByOwner ? 'Booking Cancelled by Turf Owner' : 'Booking Cancelled',
+      message: cancelledByOwner 
+        ? `Your booking at ${booking.turf.name} has been cancelled by the turf owner`
+        : `Your booking at ${booking.turf.name} has been cancelled`,
       actionUrl: `/bookings`
     });
 
-    res.json({ success: true, booking });
+    // If cancelled by turf owner, also log it
+    if (cancelledByOwner && !isBookingUser) {
+      await Notification.create({
+        user: req.user._id,
+        type: 'booking_confirmation',
+        title: 'Booking Cancelled',
+        message: `You cancelled a booking for ${booking.turf.name}`,
+        actionUrl: `/turf-bookings/${booking.turf._id}`
+      });
+    }
+
+    res.json({ 
+      success: true, 
+      booking,
+      message: 'Booking cancelled successfully. Slots have been freed up.'
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -249,13 +288,12 @@ router.put('/:id/confirm-payment', protect, async (req, res) => {
     // Check if user is the turf owner
     if (booking.turf.owner.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
       return res.status(403).json({ message: 'Not authorized to confirm this payment' });
-    }
-
-    if (booking.status !== 'pending') {
+    }    if (booking.status !== 'pending') {
       return res.status(400).json({ message: 'Booking is not in pending status' });
     }
 
     booking.status = 'confirmed';
+    booking.confirmedAt = new Date();
     await booking.save();
 
     // Send confirmation notification to user

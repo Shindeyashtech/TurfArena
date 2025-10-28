@@ -74,7 +74,6 @@ const Notifications = () => {
         return <Bell className="text-gray-500" size={20} />;
     }
   };
-
   // Filter notifications based on user role
   const getFilteredNotifications = () => {
     let filtered = notifications;
@@ -83,6 +82,11 @@ const Notifications = () => {
       filtered = filtered.filter(n => !n.isRead);
     } else if (filter !== 'all') {
       filtered = filtered.filter(n => n.type === filter);
+    }
+
+    // Hide new_booking notifications for regular users (non-turf owners)
+    if (user?.role !== 'turf_owner') {
+      filtered = filtered.filter(n => n.type !== 'new_booking');
     }
 
     // For turf owners, hide match_invite and team_request notifications
@@ -127,12 +131,10 @@ const Notifications = () => {
               <span>Mark All Read</span>
             </button>
           )}
-        </div>
-
-        {/* Filter Tabs */}
+        </div>        {/* Filter Tabs */}
         <div className="flex space-x-2 bg-white dark:bg-gray-800 rounded-lg p-1 shadow">
           {user?.role === 'turf_owner'
-            ? ['all', 'unread'].map((filterType) => (
+            ? ['all', 'unread', 'new_booking', 'booking_confirmation', 'payment'].map((filterType) => (
                 <button
                   key={filterType}
                   onClick={() => setFilter(filterType)}
@@ -145,7 +147,7 @@ const Notifications = () => {
                   {filterType.replace('_', ' ').charAt(0).toUpperCase() + filterType.slice(1).replace('_', ' ')}
                 </button>
               ))
-            : ['all', 'unread', 'match_invite', 'booking_confirmation', 'new_booking'].map((filterType) => (
+            : ['all', 'unread', 'match_invite', 'booking_confirmation', 'team_request'].map((filterType) => (
                 <button
                   key={filterType}
                   onClick={() => setFilter(filterType)}

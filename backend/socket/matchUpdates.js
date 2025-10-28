@@ -18,9 +18,12 @@ module.exports = (io) => {
       next(new Error('Authentication error'));
     }
   });
-
   io.on('connection', (socket) => {
     console.log(`User connected: ${socket.userId}`);
+
+    // Join user's personal room for notifications
+    socket.join(socket.userId);
+    console.log(`User ${socket.userId} joined personal room`);
 
     // Join match room
     socket.on('joinMatch', (matchId) => {

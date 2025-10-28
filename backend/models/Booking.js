@@ -32,12 +32,17 @@ const bookingSchema = new mongoose.Schema({
     name: String,
     email: String,
     phone: String
-  },
-  linkedMatch: {
+  },  linkedMatch: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Match'
   },
   notes: String,
+  cancelledAt: { type: Date },
+  cancelledBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
+  confirmedAt: { type: Date },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 });

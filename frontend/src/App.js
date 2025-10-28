@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { SocketProvider } from './context/SocketContext';
@@ -6,28 +6,36 @@ import Navbar from './components/Navbar';
 import PrivateRoute from './components/PrivateRoute';
 import NotificationPopup from './components/NotificationPopup';
 
-// Pages
+// Eager load critical pages
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Home from './pages/Home';
-import TurfsList from './pages/TurfsList';
-import TurfDetails from './pages/TurfDetails';
-import TurfBookings from './pages/TurfBookings';
 
-import TeamsList from './pages/TeamsList';
-import TeamDetails from './pages/TeamDetails';
-import CreateTeam from './pages/CreateTeam';
-import CreateTurf from './pages/CreateTurf';
-import MatchesList from './pages/MatchesList';
-import MatchDetails from './pages/MatchDetails';
-import CreateMatch from './pages/CreateMatch';
-import MyBookings from './pages/MyBookings';
-import Leaderboard from './pages/Leaderboard';
-import Profile from './pages/Profile';
-import Dashboard from './pages/Dashboard';
-import Chat from './pages/Chat';
-import Notifications from './pages/Notifications';
-import Settings from './pages/Settings';
+// Lazy load non-critical pages for better performance
+const TurfsList = lazy(() => import('./pages/TurfsList'));
+const TurfDetails = lazy(() => import('./pages/TurfDetails'));
+const TurfBookings = lazy(() => import('./pages/TurfBookings'));
+const TeamsList = lazy(() => import('./pages/TeamsList'));
+const TeamDetails = lazy(() => import('./pages/TeamDetails'));
+const CreateTeam = lazy(() => import('./pages/CreateTeam'));
+const CreateTurf = lazy(() => import('./pages/CreateTurf'));
+const MatchesList = lazy(() => import('./pages/MatchesList'));
+const MatchDetails = lazy(() => import('./pages/MatchDetails'));
+const CreateMatch = lazy(() => import('./pages/CreateMatch'));
+const MyBookings = lazy(() => import('./pages/MyBookings'));
+const Leaderboard = lazy(() => import('./pages/Leaderboard'));
+const Profile = lazy(() => import('./pages/Profile'));
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const Chat = lazy(() => import('./pages/Chat'));
+const Notifications = lazy(() => import('./pages/Notifications'));
+const Settings = lazy(() => import('./pages/Settings'));
+
+// Loading component
+const LoadingFallback = () => (
+  <div className="flex items-center justify-center min-h-screen">
+    <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-green-500"></div>
+  </div>
+);
 
 function App() {
   useEffect(() => {
@@ -37,7 +45,6 @@ function App() {
       document.documentElement.classList.add('dark');
     }
   }, []);
-
   return (
     <Router>
       <AuthProvider>
@@ -45,13 +52,14 @@ function App() {
           <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white transition-colors duration-300">
             <Navbar />
             <NotificationPopup />
-            <Routes>
-              {/* Public Routes */}
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
-              <Route path="/" element={<Home />} />
-              <Route path="/turfs" element={<TurfsList />} />
-              <Route path="/turfs/:id" element={<TurfDetails />} />
+            <Suspense fallback={<LoadingFallback />}>
+              <Routes>
+                {/* Public Routes */}
+                <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<Register />} />
+                <Route path="/" element={<Home />} />
+                <Route path="/turfs" element={<TurfsList />} />
+                <Route path="/turfs/:id" element={<TurfDetails />} />
               <Route
                 path="/turf-bookings/:id"
                 element={
@@ -162,11 +170,10 @@ function App() {
                     <Settings />
                   </PrivateRoute>
                 } 
-              />
-
-              {/* Catch all */}
+              />              {/* Catch all */}
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
+            </Suspense>
           </div>
         </SocketProvider>
       </AuthProvider>
