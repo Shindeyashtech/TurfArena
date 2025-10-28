@@ -1,5 +1,5 @@
 // src/pages/TeamDetails.js - CREATE THIS FILE
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { Users, Trophy, MapPin } from 'lucide-react';
 import { getTeam, joinTeam } from '../utils/api';
@@ -11,11 +11,7 @@ const TeamDetails = () => {
   const [team, setTeam] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchTeamDetails();
-  }, [id]);
-
-  const fetchTeamDetails = async () => {
+  const fetchTeamDetails = useCallback(async () => {
     try {
       const res = await getTeam(id);
       setTeam(res.data.team);
@@ -24,7 +20,11 @@ const TeamDetails = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
+
+  useEffect(() => {
+    fetchTeamDetails();
+  }, [fetchTeamDetails]);
 
   const handleJoinTeam = async () => {
     try {
@@ -49,7 +49,7 @@ const TeamDetails = () => {
     return <div className="container mx-auto px-4 py-8">Team not found</div>;
   }
 
-  const isMember = team.members.some(m => m.user._id === user?._id);
+  const isMember = team.members.some(m => m.user && m.user._id === user?._id);
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -84,12 +84,12 @@ const TeamDetails = () => {
           </h2>
           <div className="space-y-3">
             {team.members.map((member) => (
-              <div key={member.user._id} className="flex items-center space-x-3">
+              <div key={member.user?._id || member._id} className="flex items-center space-x-3">
                 <div className="w-10 h-10 bg-gradient-to-r from-green-400 to-blue-500 rounded-full flex items-center justify-center text-white font-bold">
-                  {member.user.name.charAt(0)}
+                  {member.user?.name?.charAt(0) || 'U'}
                 </div>
                 <div>
-                  <p className="font-semibold">{member.user.name}</p>
+                  <p className="font-semibold">{member.user?.name || 'Unknown User'}</p>
                   <p className="text-xs text-gray-500">{member.role}</p>
                 </div>
               </div>

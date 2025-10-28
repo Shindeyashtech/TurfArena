@@ -1,7 +1,7 @@
 // Frontend: Updated TurfDetails.js with Mock Payment
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { MapPin, Star, Calendar, Clock } from 'lucide-react';
+import { MapPin, Star, Clock } from 'lucide-react';
 import { getTurf, createBooking, createPaymentOrder, verifyPayment } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
 import MockPaymentModal from '../components/MockPaymentModal';
@@ -19,20 +19,21 @@ const TurfDetails = () => {
   const [currentOrder, setCurrentOrder] = useState(null);
   const [currentBookingData, setCurrentBookingData] = useState(null);
 
-  useEffect(() => {
-    fetchTurfDetails();
-  }, [id]);
-
-  const fetchTurfDetails = async () => {
+  const fetchTurfDetails = useCallback(async () => {
     try {
       const res = await getTurf(id);
-      setTurf(res.data.turf);
+      console.log('Turf details response:', res.data);
+      setTurf(res.data);
     } catch (error) {
       console.error('Error fetching turf:', error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
+
+  useEffect(() => {
+    fetchTurfDetails();
+  }, [fetchTurfDetails]);
 
   const handleSlotSelection = (slot) => {
     if (slot.isBooked) return;
@@ -141,13 +142,128 @@ const TurfDetails = () => {
   }
 
   const availableSlots = turf.availability.find(
-    a => a.date === selectedDate
+    a => new Date(a.date).toISOString().split('T')[0] === selectedDate
   )?.slots || [];
 
   return (
     <div className="container mx-auto px-4 py-8">
-      {/* ... rest of the TurfDetails component remains the same ... */}
-      
+      {/* Turf Header */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden mb-8">
+        <div className="h-64 bg-gradient-to-br from-green-400 to-blue-500 flex items-center justify-center">
+          <div className="text-center text-white">
+            <div className="text-6xl mb-4">🏟️</div>
+            <h1 className="text-3xl font-bold">{turf.name}</h1>
+          </div>
+        </div>
+        <div className="p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center space-x-2">
+              <MapPin size={20} className="text-gray-500" />
+              <span className="text-lg">{turf.location.address}, {turf.location.city}, {turf.location.state}</span>
+            </div>
+            <div className="flex items-center space-x-1">
+              <Star className="text-yellow-500 fill-current" size={20} />
+              <span className="text-xl font-bold">{turf.ratings.average.toFixed(1)}</span>
+              <span className="text-gray-500">({turf.ratings.count} reviews)</span>
+            </div>
+          </div>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-gray-600 dark:text-gray-400 mb-2">{turf.description}</p>
+              <div className="flex items-center space-x-4 text-sm text-gray-500">
+                <span>📏 {turf.specifications.pitchType}</span>
+                <span>👥 Capacity: {turf.specifications.capacity || 'N/A'}</span>
+                {turf.specifications.lightingAvailable && <span>💡 Lighting Available</span>}
+              </div>
+            </div>
+            <div className="text-right">
+              <div className="text-3xl font-bold text-green-500">₹{turf.pricing.basePrice}</div>
+              <div className="text-sm text-gray-500">per hour</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Booking Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Date Selection */}
+        <div className="lg:col-span-1">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+            <h3 className="text-xl font-bold mb-4">Select Date</h3>
+            <input
+              type="date"
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+              className="w-full px-4 py-2 border dark:border-gray-600 rounded-lg dark:bg-gray-700"
+              min={new Date().toISOString().split('T')[0]}
+            />
+          </div>
+        </div>
+
+        {/* Slots */}
+        <div className="lg:col-span-2">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+            <h3 className="text-xl font-bold mb-4">Available Slots</h3>
+            {selectedDate ? (
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                {availableSlots.map((slot, index) => {
+                  const isMaintenance = turf.maintenanceDates?.includes(selectedDate);
+                  const isBooked = slot.isBooked || isMaintenance;
+                  return (
+                    <button
+                      key={index}
+                      onClick={() => handleSlotSelection(slot)}
+                      disabled={isBooked}
+                      className={`p-4 rounded-lg border-2 transition ${
+                        selectedSlots.includes(`${slot.startTime}-${slot.endTime}`)
+                          ? 'border-green-500 bg-green-50 dark:bg-green-900'
+                          : isBooked
+                          ? isMaintenance
+                          ? 'border-yellow-300 bg-yellow-50 dark:bg-yellow-900 cursor-not-allowed'
+                          : 'border-red-300 bg-red-50 dark:bg-red-900 cursor-not-allowed'
+                          : 'border-gray-300 hover:border-green-500'
+                      }`}
+                    >
+                      <div className="flex items-center space-x-2">
+                        <Clock size={16} />
+                        <span>{slot.startTime} - {slot.endTime}</span>
+                      </div>
+                      {isBooked && (
+                        <span className={`text-sm ${isMaintenance ? 'text-yellow-600 dark:text-yellow-400' : 'text-red-500'}`}>
+                          {isMaintenance ? 'Maintenance' : 'Booked'}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-gray-500">Please select a date to view available slots</p>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Booking Summary */}
+      {selectedSlots.length > 0 && (
+        <div className="mt-8 bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+          <h3 className="text-xl font-bold mb-4">Booking Summary</h3>
+          <div className="flex justify-between items-center">
+            <div>
+              <p className="text-lg">Selected Slots: {selectedSlots.length}</p>
+              <p className="text-gray-600">Total Amount: ₹{calculateTotalAmount()}</p>
+            </div>
+            <button
+              onClick={handleBooking}
+              disabled={bookingLoading}
+              className="px-8 py-3 bg-gradient-to-r from-green-500 to-blue-500 text-white rounded-lg hover:opacity-90 transition disabled:opacity-50"
+            >
+              {bookingLoading ? 'Processing...' : 'Book Now'}
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Mock Payment Modal */}
       <MockPaymentModal
         isOpen={showPaymentModal}

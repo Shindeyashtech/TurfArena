@@ -41,6 +41,7 @@ const turfSchema = new mongoose.Schema({
       bookingId: { type: mongoose.Schema.Types.ObjectId, ref: 'Booking' }
     }]
   }],
+  maintenanceDates: [String], // Array of date strings in 'YYYY-MM-DD' format
   ratings: {
     average: { type: Number, default: 0 },
     count: { type: Number, default: 0 },

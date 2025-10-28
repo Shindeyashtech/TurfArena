@@ -4,13 +4,61 @@ const router = express.Router();
 const Turf = require('../models/Turf');
 const { protect } = require('../middleware/auth');
 
-// Example: Get all turfs
+// Get all turfs
 router.get('/', async (req, res) => {
   try {
-    const turfs = await Turf.find();
+    const { city, minPrice, maxPrice, sort, limit } = req.query;
+
+    let query = {};
+
+    // Filter by city
+    if (city) {
+      query['location.city'] = { $regex: city, $options: 'i' };
+    }
+
+    // Filter by price range
+    if (minPrice || maxPrice) {
+      query['pricing.basePrice'] = {};
+      if (minPrice) query['pricing.basePrice'].$gte = parseFloat(minPrice);
+      if (maxPrice) query['pricing.basePrice'].$lte = parseFloat(maxPrice);
+    }
+
+    let sortOption = {};
+    switch (sort) {
+      case 'price_low':
+        sortOption = { 'pricing.basePrice': 1 };
+        break;
+      case 'price_high':
+        sortOption = { 'pricing.basePrice': -1 };
+        break;
+      case 'rating':
+      default:
+        sortOption = { 'ratings.average': -1 };
+        break;
+    }
+
+    const turfs = await Turf.find(query)
+      .sort(sortOption)
+      .limit(limit ? parseInt(limit) : 0);
+
     res.json(turfs);
   } catch (err) {
+    console.error('Error fetching turfs:', err);
     res.status(500).json({ error: 'Failed to fetch turfs' });
+  }
+});
+
+// Get single turf by ID
+router.get('/:id', async (req, res) => {
+  try {
+    const turf = await Turf.findById(req.params.id);
+    if (!turf) {
+      return res.status(404).json({ error: 'Turf not found' });
+    }
+    res.json(turf);
+  } catch (err) {
+    console.error('Error fetching turf:', err);
+    res.status(500).json({ error: 'Failed to fetch turf' });
   }
 });
 
@@ -48,7 +96,8 @@ router.post('/', protect, async (req, res) => {
         capacity: specifications?.capacity || null,
         lightingAvailable: specifications?.lightingAvailable || false
       },
-      availability: availability || []
+      availability: availability || [],
+      maintenanceDates: req.body.maintenanceDates || []
     });
 
     await turf.save();

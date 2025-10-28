@@ -9,6 +9,7 @@ const CreateTeam = () => {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
+    city: '',
     minMembers: 6,
     maxMembers: 11,
     lookingForPlayers: true
@@ -59,6 +60,18 @@ const CreateTeam = () => {
             onChange={(e) => setFormData({ ...formData, description: e.target.value })}
             className="w-full px-4 py-2 border dark:border-gray-600 rounded-lg dark:bg-gray-700"
             placeholder="Tell others about your team..."
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-2">City *</label>
+          <input
+            type="text"
+            required
+            value={formData.city || ''}
+            onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+            className="w-full px-4 py-2 border dark:border-gray-600 rounded-lg dark:bg-gray-700"
+            placeholder="e.g., Mumbai"
           />
         </div>
 

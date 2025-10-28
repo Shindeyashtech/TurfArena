@@ -1,5 +1,5 @@
 // src/pages/TurfsList.js
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { MapPin, Star, Clock, Search, Filter, Plus } from 'lucide-react';
 import { getTurfs } from '../utils/api';
@@ -15,23 +15,35 @@ const TurfsList = () => {
     maxPrice: '',
     sort: 'rating'
   });
+  const [debouncedFilters, setDebouncedFilters] = useState(filters);
 
-  useEffect(() => {
-    fetchTurfs();
-  }, [filters]);
-
-  const fetchTurfs = async () => {
+  const fetchTurfs = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await getTurfs(filters);
-      setTurfs(res.data && res.data.turfs ? res.data.turfs : []);
+      const res = await getTurfs(debouncedFilters);
+      console.log('API Response:', res.data);
+      setTurfs(Array.isArray(res.data) ? res.data : (res.data && res.data.turfs ? res.data.turfs : []));
     } catch (error) {
       console.error('Error fetching turfs:', error);
       setTurfs([]);
     } finally {
       setLoading(false);
     }
-  };
+  }, [debouncedFilters]);
+
+  // Debounce filter updates
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedFilters(filters);
+    }, 500); // 500ms delay
+
+    return () => clearTimeout(timer);
+  }, [filters]);
+
+  // Fetch turfs when debounced filters change
+  useEffect(() => {
+    fetchTurfs();
+  }, [fetchTurfs]);
 
   if (loading) {
     return (

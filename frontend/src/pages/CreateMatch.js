@@ -141,7 +141,7 @@ const CreateMatch = () => {
                 className="w-full px-4 py-2 border dark:border-gray-600 rounded-lg dark:bg-gray-700"
               >
                 <option value="">Select team</option>
-                {teams.filter(t => t.captain?._id === user?._id).map((team) => (
+                {teams?.filter(t => t.captain?._id === user?._id).map((team) => (
                   <option key={team._id} value={team._id}>
                     {team.name}
                   </option>
@@ -158,7 +158,7 @@ const CreateMatch = () => {
                 className="w-full px-4 py-2 border dark:border-gray-600 rounded-lg dark:bg-gray-700"
               >
                 <option value="">Select opponent</option>
-                {teams.filter(t => t._id !== formData.team1).map((team) => (
+                {teams?.filter(t => t._id !== formData.team1).map((team) => (
                   <option key={team._id} value={team._id}>
                     {team.name}
                   </option>
@@ -185,7 +185,7 @@ const CreateMatch = () => {
                 className="w-full px-4 py-2 border dark:border-gray-600 rounded-lg dark:bg-gray-700"
               >
                 <option value="">Select turf</option>
-                {turfs.map((turf) => (
+                {turfs?.map((turf) => (
                   <option key={turf._id} value={turf._id}>
                     {turf.name} - ₹{turf.pricing?.basePrice}/hr ({turf.location?.city})
                   </option>

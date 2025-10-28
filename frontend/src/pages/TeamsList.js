@@ -1,5 +1,5 @@
 // src/pages/TeamsList.js
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Users, MapPin, Trophy, Search, Plus } from 'lucide-react';
 import { getTeams } from '../utils/api';
@@ -12,24 +12,34 @@ const TeamsList = () => {
     city: '',
     lookingForPlayers: false
   });
+  const [debouncedFilters, setDebouncedFilters] = useState(filters);
   const { user } = useAuth();
   const navigate = useNavigate();
 
+  // Debounce filter updates
   useEffect(() => {
-    fetchTeams();
+    const timer = setTimeout(() => {
+      setDebouncedFilters(filters);
+    }, 500); // 500ms delay
+
+    return () => clearTimeout(timer);
   }, [filters]);
 
-  const fetchTeams = async () => {
+  useEffect(() => {
+    fetchTeams();
+  }, [debouncedFilters]);
+
+  const fetchTeams = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await getTeams(filters);
+      const res = await getTeams(debouncedFilters);
       setTeams(res.data.teams);
     } catch (error) {
       console.error('Error fetching teams:', error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [debouncedFilters]);
 
   if (loading) {
     return (
@@ -97,9 +107,13 @@ const TeamsList = () => {
               <div className="w-16 h-16 bg-gradient-to-r from-green-400 to-blue-500 rounded-full flex items-center justify-center text-2xl font-bold text-white">
                 {team.name.charAt(0)}
               </div>
-              {team.lookingForPlayers && (
+              {team.lookingForPlayers ? (
                 <span className="px-2 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 text-xs rounded-full">
                   Recruiting
+                </span>
+              ) : (
+                <span className="px-2 py-1 bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 text-xs rounded-full">
+                  Full
                 </span>
               )}
             </div>
@@ -109,7 +123,12 @@ const TeamsList = () => {
             <div className="space-y-2 mb-4">
               <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400">
                 <Users size={16} />
-                <span>{team.members.length}/{team.maxMembers} Members</span>
+                <span>
+                  {team.lookingForPlayers
+                    ? `${team.members.length}/${team.maxMembers} Members`
+                    : `${team.members.length} Members`
+                  }
+                </span>
               </div>
               
               {team.location?.city && (

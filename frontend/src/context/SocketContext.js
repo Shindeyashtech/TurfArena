@@ -14,13 +14,29 @@ export const SocketProvider = ({ children }) => {
   useEffect(() => {
     if (user) {
       const token = localStorage.getItem('token');
-      const newSocket = io(process.env.REACT_APP_API_URL, {
-        auth: { token }
+      const newSocket = io(process.env.REACT_APP_API_URL || 'http://localhost:5000', {
+        auth: { token },
+        transports: ['websocket', 'polling']
+      });
+
+      newSocket.on('connect', () => {
+        console.log('Socket connected');
+      });
+
+      newSocket.on('disconnect', () => {
+        console.log('Socket disconnected');
       });
 
       setSocket(newSocket);
 
-      return () => newSocket.close();
+      return () => {
+        newSocket.close();
+      };
+    } else {
+      if (socket) {
+        socket.close();
+        setSocket(null);
+      }
     }
   }, [user]);
 

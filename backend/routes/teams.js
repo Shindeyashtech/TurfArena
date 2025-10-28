@@ -14,9 +14,12 @@ router.post('/', protect, async (req, res) => {
     const teamData = {
       ...req.body,
       captain: req.user._id,
-      members: [{ user: req.user._id, role: 'captain' }]
+      members: [{ user: req.user._id, role: 'captain' }],
+      location: {
+        city: req.body.city
+      }
     };
-    
+
     const team = await Team.create(teamData);
     res.status(201).json({ success: true, team });
   } catch (error) {
