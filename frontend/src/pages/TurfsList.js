@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { MapPin, Star, Clock, Search, Filter, Plus } from 'lucide-react';
-import { getTurfs } from '../utils/api';
+import { getTurfs, deleteTurf } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
 
 const TurfsList = () => {
@@ -20,7 +20,11 @@ const TurfsList = () => {
   const fetchTurfs = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await getTurfs(debouncedFilters);
+      // If user is a turf owner, only show their turfs
+      const filters = user?.role === 'turf_owner'
+        ? { ...debouncedFilters, owner: user._id }
+        : debouncedFilters;
+      const res = await getTurfs(filters);
       console.log('API Response:', res.data);
       setTurfs(Array.isArray(res.data) ? res.data : (res.data && res.data.turfs ? res.data.turfs : []));
     } catch (error) {
@@ -29,7 +33,7 @@ const TurfsList = () => {
     } finally {
       setLoading(false);
     }
-  }, [debouncedFilters]);
+  }, [debouncedFilters, user]);
 
   // Debounce filter updates
   useEffect(() => {
@@ -130,36 +134,65 @@ const TurfsList = () => {
       {/* Turfs Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {turfs.map((turf) => (
-          <Link
+          <div
             key={turf._id}
-            to={`/turfs/${turf._id}`}
             className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2"
           >
-            <div className="h-48 bg-gradient-to-br from-green-400 to-blue-500 flex items-center justify-center text-6xl">
-              🏟️
-            </div>
-            <div className="p-6">
-              <h3 className="text-xl font-bold mb-2">{turf.name}</h3>
-              <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400 mb-3">
-                <MapPin size={16} />
-                <span>{turf.location.city}, {turf.location.state}</span>
+            <Link to={`/turfs/${turf._id}`}>
+              <div className="h-48 bg-gradient-to-br from-green-400 to-blue-500 flex items-center justify-center text-6xl">
+                🏟️
               </div>
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center space-x-1">
-                  <Star className="text-yellow-500 fill-current" size={16} />
-                  <span className="font-semibold">{turf.ratings.average.toFixed(1)}</span>
-                  <span className="text-sm text-gray-500">({turf.ratings.count})</span>
+              <div className="p-6">
+                <h3 className="text-xl font-bold mb-2">{turf.name}</h3>
+                <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400 mb-3">
+                  <MapPin size={16} />
+                  <span>{turf.location.city}, {turf.location.state}</span>
                 </div>
-                <span className="text-lg font-bold text-green-500">
-                  ₹{turf.pricing.basePrice}/hr
-                </span>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center space-x-1">
+                    <Star className="text-yellow-500 fill-current" size={16} />
+                    <span className="font-semibold">{turf.ratings?.average?.toFixed(1) || '0.0'}</span>
+                    <span className="text-sm text-gray-500">({turf.ratings?.count || 0})</span>
+                  </div>
+                  <span className="text-lg font-bold text-green-500">
+                    ₹{turf.pricing?.basePrice || 'N/A'}/hr
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-sm text-gray-600 dark:text-gray-400">
+                  <span>{turf.specifications.pitchType}</span>
+                  <Clock size={16} />
+                </div>
               </div>
-              <div className="flex items-center justify-between text-sm text-gray-600 dark:text-gray-400">
-                <span>{turf.specifications.pitchType}</span>
-                <Clock size={16} />
+            </Link>
+            {user && user.role === 'turf_owner' && turf.owner === user._id && (
+              <div className="px-6 pb-4 flex space-x-2">
+                <Link
+                  to={`/turfs/${turf._id}/edit`}
+                  className="flex-1 px-3 py-2 bg-blue-500 text-white text-sm rounded-lg hover:bg-blue-600 transition text-center"
+                >
+                  Edit
+                </Link>
+                <button
+                  onClick={async () => {
+                    if (window.confirm('Are you sure you want to delete this turf?')) {
+                      try {
+                        await deleteTurf(turf._id);
+                        // Refresh the turfs list
+                        fetchTurfs();
+                        alert('Turf deleted successfully');
+                      } catch (error) {
+                        console.error('Error deleting turf:', error);
+                        alert('Failed to delete turf');
+                      }
+                    }
+                  }}
+                  className="flex-1 px-3 py-2 bg-red-500 text-white text-sm rounded-lg hover:bg-red-600 transition"
+                >
+                  Delete
+                </button>
               </div>
-            </div>
-          </Link>
+            )}
+          </div>
         ))}
       </div>
 

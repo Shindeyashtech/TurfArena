@@ -2,15 +2,15 @@ const mongoose = require('mongoose'); // ← This line is mandatory
 
 // models/Notification.js
 const notificationSchema = new mongoose.Schema({
-  user: { 
-    type: mongoose.Schema.Types.ObjectId, 
-    ref: 'User', 
-    required: true 
+  user: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
   },
-  type: { 
-    type: String, 
-    enum: ['match_invite', 'booking_confirmation', 'team_request', 'match_update', 'payment', 'achievement'],
-    required: true 
+  type: {
+    type: String,
+    enum: ['match_invite', 'booking_confirmation', 'team_request', 'match_update', 'payment', 'achievement', 'new_booking'],
+    required: true
   },
   title: { type: String, required: true },
   message: { type: String, required: true },
@@ -24,4 +24,3 @@ notificationSchema.index({ user: 1, createdAt: -1 });
 notificationSchema.index({ user: 1, isRead: 1 });
 
 module.exports = mongoose.model('Notification', notificationSchema);
-

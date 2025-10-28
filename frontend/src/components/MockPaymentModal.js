@@ -8,8 +8,17 @@ const MockPaymentModal = ({ isOpen, onClose, amount, onSuccess, orderId }) => {
   const [cardName, setCardName] = useState('');
   const [expiryDate, setExpiryDate] = useState('');
   const [cvv, setCvv] = useState('');
+  const [customerName, setCustomerName] = useState('');
+  const [customerEmail, setCustomerEmail] = useState('');
+  const [customerPhone, setCustomerPhone] = useState('');
 
   const handlePayment = async () => {
+    // Validate required fields
+    if (!customerName.trim() || !customerEmail.trim() || !customerPhone.trim()) {
+      alert('Please fill in all required fields (Name, Email, Phone)');
+      return;
+    }
+
     setProcessing(true);
 
     // Simulate payment processing delay
@@ -22,7 +31,12 @@ const MockPaymentModal = ({ isOpen, onClose, amount, onSuccess, orderId }) => {
     onSuccess({
       razorpayOrderId: orderId,
       razorpayPaymentId: mockPaymentId,
-      razorpaySignature: mockSignature
+      razorpaySignature: mockSignature,
+      customerDetails: {
+        name: customerName,
+        email: customerEmail,
+        phone: customerPhone
+      }
     });
 
     setProcessing(false);
@@ -57,6 +71,43 @@ const MockPaymentModal = ({ isOpen, onClose, amount, onSuccess, orderId }) => {
         </div>
 
         <div className="space-y-4 mb-6">
+          <div>
+            <label className="block text-sm font-medium mb-2">Full Name *</label>
+            <input
+              type="text"
+              value={customerName}
+              onChange={(e) => setCustomerName(e.target.value)}
+              placeholder="Enter your full name"
+              className="w-full px-4 py-2 border dark:border-gray-600 rounded-lg dark:bg-gray-700"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2">Email Address *</label>
+            <input
+              type="email"
+              value={customerEmail}
+              onChange={(e) => setCustomerEmail(e.target.value)}
+              placeholder="Enter your email"
+              className="w-full px-4 py-2 border dark:border-gray-600 rounded-lg dark:bg-gray-700"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2">Phone Number *</label>
+            <input
+              type="tel"
+              value={customerPhone}
+              onChange={(e) => setCustomerPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+              placeholder="Enter your phone number"
+              className="w-full px-4 py-2 border dark:border-gray-600 rounded-lg dark:bg-gray-700"
+              maxLength="10"
+              required
+            />
+          </div>
+
           <div>
             <label className="block text-sm font-medium mb-2">Card Number</label>
             <input

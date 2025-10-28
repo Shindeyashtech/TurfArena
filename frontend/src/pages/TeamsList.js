@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Users, MapPin, Trophy, Search, Plus } from 'lucide-react';
-import { getTeams } from '../utils/api';
+import { getTeams, deleteTeam } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
 
 const TeamsList = () => {
@@ -32,14 +32,16 @@ const TeamsList = () => {
   const fetchTeams = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await getTeams(debouncedFilters);
+      // If user is logged in, show all teams, but for team captains, they can see their own teams
+      const filters = user ? debouncedFilters : { ...debouncedFilters, captain: user._id };
+      const res = await getTeams(filters);
       setTeams(res.data.teams);
     } catch (error) {
       console.error('Error fetching teams:', error);
     } finally {
       setLoading(false);
     }
-  }, [debouncedFilters]);
+  }, [debouncedFilters, user]);
 
   if (loading) {
     return (
@@ -98,57 +100,86 @@ const TeamsList = () => {
       {/* Teams Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {teams.map((team) => (
-          <Link
+          <div
             key={team._id}
-            to={`/teams/${team._id}`}
             className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2"
           >
-            <div className="flex items-start justify-between mb-4">
-              <div className="w-16 h-16 bg-gradient-to-r from-green-400 to-blue-500 rounded-full flex items-center justify-center text-2xl font-bold text-white">
-                {team.name.charAt(0)}
-              </div>
-              {team.lookingForPlayers ? (
-                <span className="px-2 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 text-xs rounded-full">
-                  Recruiting
-                </span>
-              ) : (
-                <span className="px-2 py-1 bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 text-xs rounded-full">
-                  Full
-                </span>
-              )}
-            </div>
-
-            <h3 className="text-xl font-bold mb-2">{team.name}</h3>
-            
-            <div className="space-y-2 mb-4">
-              <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400">
-                <Users size={16} />
-                <span>
-                  {team.lookingForPlayers
-                    ? `${team.members.length}/${team.maxMembers} Members`
-                    : `${team.members.length} Members`
-                  }
-                </span>
-              </div>
-              
-              {team.location?.city && (
-                <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400">
-                  <MapPin size={16} />
-                  <span>{team.location.city}</span>
+            <Link to={`/teams/${team._id}`}>
+              <div className="flex items-start justify-between mb-4">
+                <div className="w-16 h-16 bg-gradient-to-r from-green-400 to-blue-500 rounded-full flex items-center justify-center text-2xl font-bold text-white">
+                  {team.name.charAt(0)}
                 </div>
-              )}
-
-              <div className="flex items-center space-x-2 text-sm">
-                <Trophy className="text-yellow-500" size={16} />
-                <span className="font-semibold">Rating: {team.statistics.teamRating}</span>
+                {team.lookingForPlayers ? (
+                  <span className="px-2 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 text-xs rounded-full">
+                    Recruiting
+                  </span>
+                ) : (
+                  <span className="px-2 py-1 bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 text-xs rounded-full">
+                    Full
+                  </span>
+                )}
               </div>
-            </div>
 
-            <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400">
-              <span>{team.statistics.matchesPlayed} Matches</span>
-              <span>{team.statistics.matchesWon} Wins</span>
-            </div>
-          </Link>
+              <h3 className="text-xl font-bold mb-2">{team.name}</h3>
+
+              <div className="space-y-2 mb-4">
+                <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400">
+                  <Users size={16} />
+                  <span>
+                    {team.lookingForPlayers
+                      ? `${team.members.length}/${team.maxMembers} Members`
+                      : `${team.members.length} Members`
+                    }
+                  </span>
+                </div>
+
+                {team.location?.city && (
+                  <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400">
+                    <MapPin size={16} />
+                    <span>{team.location.city}</span>
+                  </div>
+                )}
+
+                <div className="flex items-center space-x-2 text-sm">
+                  <Trophy className="text-yellow-500" size={16} />
+                  <span className="font-semibold">Rating: {team.statistics.teamRating}</span>
+                </div>
+              </div>
+
+              <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400">
+                <span>{team.statistics.matchesPlayed} Matches</span>
+                <span>{team.statistics.matchesWon} Wins</span>
+              </div>
+            </Link>
+            {user && team.captain && user._id === team.captain._id && (
+              <div className="mt-4 flex space-x-2">
+                <Link
+                  to={`/teams/${team._id}/edit`}
+                  className="flex-1 px-3 py-2 bg-blue-500 text-white text-sm rounded-lg hover:bg-blue-600 transition text-center"
+                >
+                  Edit
+                </Link>
+                <button
+                  onClick={async () => {
+                    if (window.confirm('Are you sure you want to delete this team?')) {
+                      try {
+                        await deleteTeam(team._id);
+                        // Refresh the teams list
+                        fetchTeams();
+                        alert('Team deleted successfully');
+                      } catch (error) {
+                        console.error('Error deleting team:', error);
+                        alert('Failed to delete team');
+                      }
+                    }
+                  }}
+                  className="flex-1 px-3 py-2 bg-red-500 text-white text-sm rounded-lg hover:bg-red-600 transition"
+                >
+                  Delete
+                </button>
+              </div>
+            )}
+          </div>
         ))}
       </div>
 

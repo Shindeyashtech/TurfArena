@@ -24,13 +24,18 @@ const bookingSchema = new mongoose.Schema({
     enum: ['pending', 'confirmed', 'cancelled', 'completed'], 
     default: 'pending' 
   },
-  paymentId: { 
-    type: mongoose.Schema.Types.ObjectId, 
-    ref: 'Payment' 
+  paymentId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Payment'
   },
-  linkedMatch: { 
-    type: mongoose.Schema.Types.ObjectId, 
-    ref: 'Match' 
+  customerDetails: {
+    name: String,
+    email: String,
+    phone: String
+  },
+  linkedMatch: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Match'
   },
   notes: String,
   createdAt: { type: Date, default: Date.now },

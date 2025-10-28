@@ -1,10 +1,13 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { MapPin, Plus, Calendar, Clock } from 'lucide-react';
-import { createTurf } from '../utils/api';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { MapPin, Plus, Calendar, Clock, Edit } from 'lucide-react';
+import { createTurf, getTurf, updateTurf } from '../utils/api';
 
 const CreateTurf = () => {
   const navigate = useNavigate();
+  const { id } = useParams();
+  const isEditing = !!id;
+
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -20,6 +23,33 @@ const CreateTurf = () => {
   const [newSlots, setNewSlots] = useState([{ startTime: '', endTime: '' }]);
   const [dateRange, setDateRange] = useState({ startDate: '', endDate: '' });
   const [maintenanceDate, setMaintenanceDate] = useState('');
+  const [isFullDay, setIsFullDay] = useState(false);
+
+  useEffect(() => {
+    if (isEditing) {
+      const fetchTurf = async () => {
+        try {
+          const response = await getTurf(id);
+          const turf = response.data;
+          setFormData({
+            name: turf.name || '',
+            description: turf.description || '',
+            location: `${turf.location.city}, ${turf.location.state}`,
+            address: turf.location.address || '',
+            pricePerHour: turf.pricing.basePrice.toString() || '',
+            amenities: turf.amenities || [],
+            images: turf.images || [],
+            availability: turf.availability || [],
+            maintenanceDates: turf.maintenanceDates || []
+          });
+        } catch (error) {
+          console.error('Error fetching turf:', error);
+          alert('Failed to load turf data');
+        }
+      };
+      fetchTurf();
+    }
+  }, [id, isEditing]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -48,15 +78,21 @@ const CreateTurf = () => {
         specifications: {
           pitchType: 'turf'
         },
-        availability: formData.availability
+        availability: formData.availability,
+        maintenanceDates: formData.maintenanceDates
       };
 
-      await createTurf(turfData);
-      alert('Turf created successfully!');
+      if (isEditing) {
+        await updateTurf(id, turfData);
+        alert('Turf updated successfully!');
+      } else {
+        await createTurf(turfData);
+        alert('Turf created successfully!');
+      }
       navigate('/turfs');
     } catch (error) {
-      console.error('Error creating turf:', error);
-      alert('Failed to create turf: ' + (error.response?.data?.error || error.message));
+      console.error('Error saving turf:', error);
+      alert('Failed to save turf: ' + (error.response?.data?.error || error.message));
     } finally {
       setLoading(false);
     }
@@ -87,8 +123,8 @@ const CreateTurf = () => {
   return (
     <div className="container mx-auto px-4 py-8 max-w-2xl">
       <h1 className="text-3xl font-bold mb-8 flex items-center">
-        <MapPin className="mr-3 text-green-500" />
-        Create Turf
+        {isEditing ? <Edit className="mr-3 text-green-500" /> : <MapPin className="mr-3 text-green-500" />}
+        {isEditing ? 'Edit Turf' : 'Create Turf'}
       </h1>
 
       <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 space-y-6">
@@ -218,53 +254,68 @@ const CreateTurf = () => {
               </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium mb-2">Time Slots</label>
-              {newSlots.map((slot, index) => (
-                <div key={index} className="flex items-center space-x-2 mb-2">
-                  <Clock size={16} className="text-gray-500" />
-                  <input
-                    type="time"
-                    value={slot.startTime}
-                    onChange={(e) => {
-                      const updatedSlots = [...newSlots];
-                      updatedSlots[index].startTime = e.target.value;
-                      setNewSlots(updatedSlots);
-                    }}
-                    className="px-3 py-2 border dark:border-gray-600 rounded-lg dark:bg-gray-700 text-sm"
-                    placeholder="Start"
-                  />
-                  <span className="text-gray-500">to</span>
-                  <input
-                    type="time"
-                    value={slot.endTime}
-                    onChange={(e) => {
-                      const updatedSlots = [...newSlots];
-                      updatedSlots[index].endTime = e.target.value;
-                      setNewSlots(updatedSlots);
-                    }}
-                    className="px-3 py-2 border dark:border-gray-600 rounded-lg dark:bg-gray-700 text-sm"
-                    placeholder="End"
-                  />
-                  {newSlots.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => setNewSlots(newSlots.filter((_, i) => i !== index))}
-                      className="text-red-500 hover:text-red-700"
-                    >
-                      Remove
-                    </button>
-                  )}
-                </div>
-              ))}
-              <button
-                type="button"
-                onClick={() => setNewSlots([...newSlots, { startTime: '', endTime: '' }])}
-                className="text-green-500 hover:text-green-700 text-sm"
-              >
-                + Add another slot
-              </button>
+            <div className="flex items-center space-x-2 mb-4">
+              <input
+                type="checkbox"
+                id="fullDay"
+                checked={isFullDay}
+                onChange={(e) => setIsFullDay(e.target.checked)}
+                className="w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded focus:ring-green-500 dark:focus:ring-green-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+              />
+              <label htmlFor="fullDay" className="text-sm font-medium text-gray-900 dark:text-gray-300">
+                Full Day Available (6 AM - 11 PM)
+              </label>
             </div>
+
+            {!isFullDay && (
+              <div>
+                <label className="block text-sm font-medium mb-2">Time Slots</label>
+                {newSlots.map((slot, index) => (
+                  <div key={index} className="flex items-center space-x-2 mb-2">
+                    <Clock size={16} className="text-gray-500" />
+                    <input
+                      type="time"
+                      value={slot.startTime}
+                      onChange={(e) => {
+                        const updatedSlots = [...newSlots];
+                        updatedSlots[index].startTime = e.target.value;
+                        setNewSlots(updatedSlots);
+                      }}
+                      className="px-3 py-2 border dark:border-gray-600 rounded-lg dark:bg-gray-700 text-sm"
+                      placeholder="Start"
+                    />
+                    <span className="text-gray-500">to</span>
+                    <input
+                      type="time"
+                      value={slot.endTime}
+                      onChange={(e) => {
+                        const updatedSlots = [...newSlots];
+                        updatedSlots[index].endTime = e.target.value;
+                        setNewSlots(updatedSlots);
+                      }}
+                      className="px-3 py-2 border dark:border-gray-600 rounded-lg dark:bg-gray-700 text-sm"
+                      placeholder="End"
+                    />
+                    {newSlots.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => setNewSlots(newSlots.filter((_, i) => i !== index))}
+                        className="text-red-500 hover:text-red-700"
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => setNewSlots([...newSlots, { startTime: '', endTime: '' }])}
+                  className="text-green-500 hover:text-green-700 text-sm"
+                >
+                  + Add another slot
+                </button>
+              </div>
+            )}
 
             <button
               type="button"
@@ -273,7 +324,7 @@ const CreateTurf = () => {
                   alert('Please select both start and end dates');
                   return;
                 }
-                if (newSlots.some(slot => !slot.startTime || !slot.endTime)) {
+                if (!isFullDay && newSlots.some(slot => !slot.startTime || !slot.endTime)) {
                   alert('Please fill all time slots');
                   return;
                 }
@@ -286,13 +337,33 @@ const CreateTurf = () => {
                   dates.push(new Date(d));
                 }
 
+                const slotsToAdd = isFullDay ? [
+                  { startTime: '06:00', endTime: '07:00', isBooked: false },
+                  { startTime: '07:00', endTime: '08:00', isBooked: false },
+                  { startTime: '08:00', endTime: '09:00', isBooked: false },
+                  { startTime: '09:00', endTime: '10:00', isBooked: false },
+                  { startTime: '10:00', endTime: '11:00', isBooked: false },
+                  { startTime: '11:00', endTime: '12:00', isBooked: false },
+                  { startTime: '12:00', endTime: '13:00', isBooked: false },
+                  { startTime: '13:00', endTime: '14:00', isBooked: false },
+                  { startTime: '14:00', endTime: '15:00', isBooked: false },
+                  { startTime: '15:00', endTime: '16:00', isBooked: false },
+                  { startTime: '16:00', endTime: '17:00', isBooked: false },
+                  { startTime: '17:00', endTime: '18:00', isBooked: false },
+                  { startTime: '18:00', endTime: '19:00', isBooked: false },
+                  { startTime: '19:00', endTime: '20:00', isBooked: false },
+                  { startTime: '20:00', endTime: '21:00', isBooked: false },
+                  { startTime: '21:00', endTime: '22:00', isBooked: false },
+                  { startTime: '22:00', endTime: '23:00', isBooked: false }
+                ] : newSlots.map(slot => ({
+                  startTime: slot.startTime,
+                  endTime: slot.endTime,
+                  isBooked: false
+                }));
+
                 const newAvailabilities = dates.map(date => ({
                   date: date.toISOString().split('T')[0],
-                  slots: newSlots.map(slot => ({
-                    startTime: slot.startTime,
-                    endTime: slot.endTime,
-                    isBooked: false
-                  }))
+                  slots: slotsToAdd
                 }));
 
                 setFormData({
@@ -302,6 +373,7 @@ const CreateTurf = () => {
 
                 setDateRange({ startDate: '', endDate: '' });
                 setNewSlots([{ startTime: '', endTime: '' }]);
+                setIsFullDay(false);
               }}
               className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 text-sm"
             >
@@ -309,14 +381,14 @@ const CreateTurf = () => {
             </button>
           </div>
 
-          {/* Maintenance Dates */}
+          {/* Maintenance and Booking Dates */}
           <div className="space-y-4 p-4 border dark:border-gray-600 rounded-lg bg-yellow-50 dark:bg-yellow-900/20 mb-4">
             <div>
               <label className="block text-sm font-medium mb-2 flex items-center">
                 <span className="w-3 h-3 bg-yellow-500 rounded-full mr-2"></span>
-                Maintenance Dates
+                Maintenance & Booking Management
               </label>
-              <p className="text-sm text-gray-500 mb-2">Select dates when the turf will be under maintenance</p>
+              <p className="text-sm text-gray-500 mb-2">Select dates for maintenance or mark dates as fully booked</p>
               <input
                 type="date"
                 value={maintenanceDate}
@@ -324,27 +396,88 @@ const CreateTurf = () => {
                 min={new Date().toISOString().split('T')[0]}
                 className="w-full px-4 py-2 border dark:border-gray-600 rounded-lg dark:bg-gray-700"
               />
-              <button
-                type="button"
-                onClick={() => {
-                  if (!maintenanceDate) {
-                    alert('Please select a maintenance date');
-                    return;
-                  }
-                  if (formData.maintenanceDates.includes(maintenanceDate)) {
-                    alert('This date is already marked for maintenance');
-                    return;
-                  }
-                  setFormData({
-                    ...formData,
-                    maintenanceDates: [...formData.maintenanceDates, maintenanceDate]
-                  });
-                  setMaintenanceDate('');
-                }}
-                className="mt-2 px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 text-sm"
-              >
-                Mark as Maintenance
-              </button>
+              <div className="flex space-x-2 mt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!maintenanceDate) {
+                      alert('Please select a date');
+                      return;
+                    }
+                    if (formData.maintenanceDates.includes(maintenanceDate)) {
+                      alert('This date is already marked for maintenance');
+                      return;
+                    }
+                    setFormData({
+                      ...formData,
+                      maintenanceDates: [...formData.maintenanceDates, maintenanceDate]
+                    });
+                    setMaintenanceDate('');
+                  }}
+                  className="px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 text-sm"
+                >
+                  Mark as Maintenance
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!maintenanceDate) {
+                      alert('Please select a date');
+                      return;
+                    }
+                    // Check if date already exists in availability
+                    const existingAvailabilityIndex = formData.availability.findIndex(
+                      avail => avail.date === maintenanceDate
+                    );
+
+                    if (existingAvailabilityIndex !== -1) {
+                      // Update existing availability to mark all slots as booked
+                      const updatedAvailability = [...formData.availability];
+                      updatedAvailability[existingAvailabilityIndex].slots = updatedAvailability[existingAvailabilityIndex].slots.map(slot => ({
+                        ...slot,
+                        isBooked: true
+                      }));
+                      setFormData({
+                        ...formData,
+                        availability: updatedAvailability
+                      });
+                    } else {
+                      // Create new availability entry with all slots booked
+                      const bookedSlots = [
+                        { startTime: '06:00', endTime: '07:00', isBooked: true },
+                        { startTime: '07:00', endTime: '08:00', isBooked: true },
+                        { startTime: '08:00', endTime: '09:00', isBooked: true },
+                        { startTime: '09:00', endTime: '10:00', isBooked: true },
+                        { startTime: '10:00', endTime: '11:00', isBooked: true },
+                        { startTime: '11:00', endTime: '12:00', isBooked: true },
+                        { startTime: '12:00', endTime: '13:00', isBooked: true },
+                        { startTime: '13:00', endTime: '14:00', isBooked: true },
+                        { startTime: '14:00', endTime: '15:00', isBooked: true },
+                        { startTime: '15:00', endTime: '16:00', isBooked: true },
+                        { startTime: '16:00', endTime: '17:00', isBooked: true },
+                        { startTime: '17:00', endTime: '18:00', isBooked: true },
+                        { startTime: '18:00', endTime: '19:00', isBooked: true },
+                        { startTime: '19:00', endTime: '20:00', isBooked: true },
+                        { startTime: '20:00', endTime: '21:00', isBooked: true },
+                        { startTime: '21:00', endTime: '22:00', isBooked: true },
+                        { startTime: '22:00', endTime: '23:00', isBooked: true }
+                      ];
+                      setFormData({
+                        ...formData,
+                        availability: [...formData.availability, {
+                          date: maintenanceDate,
+                          slots: bookedSlots
+                        }]
+                      });
+                    }
+                    setMaintenanceDate('');
+                    alert('Date marked as fully booked!');
+                  }}
+                  className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 text-sm"
+                >
+                  Mark as Booked
+                </button>
+              </div>
             </div>
 
             {formData.maintenanceDates.length > 0 && (
@@ -433,7 +566,7 @@ const CreateTurf = () => {
             className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-green-500 to-blue-500 text-white rounded-lg hover:opacity-90 transition disabled:opacity-50"
           >
             <Plus size={20} />
-            <span>{loading ? 'Creating...' : 'Create Turf'}</span>
+            <span>{loading ? (isEditing ? 'Updating...' : 'Creating...') : (isEditing ? 'Update Turf' : 'Create Turf')}</span>
           </button>
         </div>
       </form>

@@ -11,6 +11,7 @@ import Register from './pages/Register';
 import Home from './pages/Home';
 import TurfsList from './pages/TurfsList';
 import TurfDetails from './pages/TurfDetails';
+import TurfBookings from './pages/TurfBookings';
 
 import TeamsList from './pages/TeamsList';
 import TeamDetails from './pages/TeamDetails';
@@ -49,6 +50,14 @@ function App() {
               <Route path="/" element={<Home />} />
               <Route path="/turfs" element={<TurfsList />} />
               <Route path="/turfs/:id" element={<TurfDetails />} />
+              <Route
+                path="/turfs/:id/bookings"
+                element={
+                  <PrivateRoute requiredRole="turf_owner">
+                    <TurfBookings />
+                  </PrivateRoute>
+                }
+              />
               <Route path="/teams" element={<TeamsList />} />
               <Route path="/teams/:id" element={<TeamDetails />} />
               <Route path="/matches" element={<MatchesList />} />
@@ -56,21 +65,37 @@ function App() {
               <Route path="/leaderboard" element={<Leaderboard />} />
 
               {/* Protected Routes */}
-              <Route 
-                path="/turfs/create" 
+              <Route
+                path="/turfs/create"
                 element={
                   <PrivateRoute requiredRole="turf_owner">
                     <CreateTurf />
                   </PrivateRoute>
-                } 
+                }
               />
-              <Route 
-                path="/teams/create" 
+              <Route
+                path="/turfs/:id/edit"
+                element={
+                  <PrivateRoute requiredRole="turf_owner">
+                    <CreateTurf />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/teams/create"
                 element={
                   <PrivateRoute>
                     <CreateTeam />
                   </PrivateRoute>
-                } 
+                }
+              />
+              <Route
+                path="/teams/:id/edit"
+                element={
+                  <PrivateRoute>
+                    <CreateTeam />
+                  </PrivateRoute>
+                }
               />
               <Route 
                 path="/matches/create" 
@@ -80,13 +105,21 @@ function App() {
                   </PrivateRoute>
                 } 
               />
-              <Route 
-                path="/bookings" 
+              <Route
+                path="/my-bookings"
                 element={
                   <PrivateRoute>
                     <MyBookings />
                   </PrivateRoute>
-                } 
+                }
+              />
+              <Route
+                path="/bookings"
+                element={
+                  <PrivateRoute>
+                    <MyBookings />
+                  </PrivateRoute>
+                }
               />
               <Route 
                 path="/profile" 

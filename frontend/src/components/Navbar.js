@@ -2,9 +2,9 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { 
-  Trophy, Bell, MessageSquare, Menu, X, 
-  Sun, Moon, LogOut, User, Settings 
+import {
+  Trophy, Bell, MessageSquare, Menu, X,
+  Sun, Moon, LogOut, User, Settings, Calendar
 } from 'lucide-react';
 import { getNotifications } from '../utils/api';
 
@@ -117,6 +117,16 @@ const Navbar = () => {
                         <User size={16} className="mr-2" />
                         Profile
                       </Link>
+                      {user.role !== 'turf_owner' && (
+                        <Link
+                          to="/my-bookings"
+                          className="flex items-center px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700"
+                          onClick={() => setUserMenuOpen(false)}
+                        >
+                          <Calendar size={16} className="mr-2" />
+                          My Bookings
+                        </Link>
+                      )}
                       <Link
                         to="/settings"
                         className="flex items-center px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700"

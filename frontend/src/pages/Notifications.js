@@ -30,7 +30,7 @@ const Notifications = () => {
   const handleMarkRead = async (id) => {
     try {
       await markNotificationRead(id);
-      setNotifications(notifications.map(n => 
+      setNotifications(notifications.map(n =>
         n._id === id ? { ...n, isRead: true } : n
       ));
     } catch (error) {
@@ -66,6 +66,8 @@ const Notifications = () => {
         return <Calendar className="text-green-500" size={20} />;
       case 'payment':
         return <DollarSign className="text-purple-500" size={20} />;
+      case 'new_booking':
+        return <Calendar className="text-orange-500" size={20} />;
       default:
         return <Bell className="text-gray-500" size={20} />;
     }
@@ -94,7 +96,7 @@ const Notifications = () => {
               </span>
             )}
           </div>
-          
+
           {unreadCount > 0 && (
             <button
               onClick={handleMarkAllRead}
@@ -108,7 +110,7 @@ const Notifications = () => {
 
         {/* Filter Tabs */}
         <div className="flex space-x-2 bg-white dark:bg-gray-800 rounded-lg p-1 shadow">
-          {['all', 'unread', 'match_invite', 'booking_confirmation'].map((filterType) => (
+          {['all', 'unread', 'match_invite', 'booking_confirmation', 'new_booking'].map((filterType) => (
             <button
               key={filterType}
               onClick={() => setFilter(filterType)}
@@ -146,7 +148,7 @@ const Notifications = () => {
                 <div className="flex-shrink-0 mt-1">
                   {getNotificationIcon(notification.type)}
                 </div>
-                
+
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between mb-1">
                     <p className="font-semibold">{notification.title}</p>
@@ -157,7 +159,16 @@ const Notifications = () => {
                   <p className="text-sm text-gray-600 dark:text-gray-400">
                     {notification.message}
                   </p>
-                  
+
+                  {/* Show additional details for new_booking notifications */}
+                  {notification.type === 'new_booking' && notification.data && (
+                    <div className="mt-2 p-2 bg-orange-50 dark:bg-orange-900 rounded text-xs">
+                      <p><strong>Customer:</strong> {notification.data.customerName}</p>
+                      <p><strong>Amount:</strong> ₹{notification.data.totalAmount}</p>
+                      <p><strong>Date:</strong> {new Date(notification.data.bookingDate).toLocaleDateString()}</p>
+                    </div>
+                  )}
+
                   {notification.actionUrl && (
                     <button className="mt-2 text-sm text-green-500 hover:underline">
                       View Details →
@@ -187,4 +198,3 @@ const Notifications = () => {
 };
 
 export default Notifications;
-

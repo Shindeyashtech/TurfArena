@@ -11,37 +11,37 @@ const { protect } = require('../middleware/auth');
 // @access  Private
 router.post('/', protect, async (req, res) => {
   try {
-    const { turf, bookingDate, slots, totalAmount } = req.body;
-    
+    const { turf, bookingDate, slots, totalAmount, customerDetails } = req.body;
+
     // Check if slots are available
     const turfDoc = await Turf.findById(turf);
     if (!turfDoc) {
       return res.status(404).json({ message: 'Turf not found' });
     }
-    
+
     // Check slot availability logic here
     const availability = turfDoc.availability.find(
       a => new Date(a.date).toDateString() === new Date(bookingDate).toDateString()
     );
-    
+
     if (!availability) {
       return res.status(400).json({ message: 'No slots available for this date' });
     }
-    
+
     // Verify all requested slots are available
     for (const requestedSlot of slots) {
       const turfSlot = availability.slots.find(
-        s => s.startTime === requestedSlot.startTime && 
+        s => s.startTime === requestedSlot.startTime &&
              s.endTime === requestedSlot.endTime
       );
-      
+
       if (!turfSlot || turfSlot.isBooked) {
-        return res.status(400).json({ 
-          message: `Slot ${requestedSlot.startTime}-${requestedSlot.endTime} is not available` 
+        return res.status(400).json({
+          message: `Slot ${requestedSlot.startTime}-${requestedSlot.endTime} is not available`
         });
       }
     }
-    
+
     // Create booking
     const booking = await Booking.create({
       user: req.user._id,
@@ -49,13 +49,14 @@ router.post('/', protect, async (req, res) => {
       bookingDate,
       slots,
       totalAmount,
-      status: 'pending'
+      status: 'pending',
+      customerDetails
     });
-    
+
     // Mark slots as booked (will be confirmed after payment)
     slots.forEach(requestedSlot => {
       const turfSlot = availability.slots.find(
-        s => s.startTime === requestedSlot.startTime && 
+        s => s.startTime === requestedSlot.startTime &&
              s.endTime === requestedSlot.endTime
       );
       if (turfSlot) {
@@ -63,9 +64,27 @@ router.post('/', protect, async (req, res) => {
         turfSlot.bookingId = booking._id;
       }
     });
-    
+
     await turfDoc.save();
-    
+
+    // Send notification to turf owner
+    if (turfDoc.owner) {
+      await Notification.create({
+        user: turfDoc.owner,
+        type: 'new_booking',
+        title: 'New Booking Received',
+        message: `You have received a new booking for ${turfDoc.name} on ${new Date(bookingDate).toLocaleDateString()}`,
+        actionUrl: `/turf-bookings/${turf}`,
+        data: {
+          bookingId: booking._id,
+          turfId: turf,
+          customerName: customerDetails?.name || 'Customer',
+          bookingDate: bookingDate,
+          totalAmount: totalAmount
+        }
+      });
+    }
+
     res.status(201).json({ success: true, booking });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -80,7 +99,7 @@ router.get('/my', protect, async (req, res) => {
     const bookings = await Booking.find({ user: req.user._id })
       .populate('turf', 'name location images pricing')
       .sort('-createdAt');
-    
+
     res.json({ success: true, bookings });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -95,11 +114,11 @@ router.get('/:id', protect, async (req, res) => {
     const booking = await Booking.findById(req.params.id)
       .populate('turf', 'name location images pricing')
       .populate('user', 'name email phone');
-    
+
     if (!booking) {
       return res.status(404).json({ message: 'Booking not found' });
     }
-    
+
     // Check authorization
     const turf = await Turf.findById(booking.turf._id);
     if (
@@ -109,7 +128,7 @@ router.get('/:id', protect, async (req, res) => {
     ) {
       return res.status(403).json({ message: 'Not authorized' });
     }
-    
+
     res.json({ success: true, booking });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -122,18 +141,18 @@ router.get('/:id', protect, async (req, res) => {
 router.put('/:id/confirm', protect, async (req, res) => {
   try {
     const booking = await Booking.findById(req.params.id);
-    
+
     if (!booking) {
       return res.status(404).json({ message: 'Booking not found' });
     }
-    
+
     if (booking.user.toString() !== req.user._id.toString()) {
       return res.status(403).json({ message: 'Not authorized' });
     }
-    
+
     booking.status = 'confirmed';
     await booking.save();
-    
+
     // Send confirmation notification
     await Notification.create({
       user: req.user._id,
@@ -142,7 +161,7 @@ router.put('/:id/confirm', protect, async (req, res) => {
       message: `Your booking at ${booking.turf.name} has been confirmed`,
       actionUrl: `/bookings/${booking._id}`
     });
-    
+
     res.json({ success: true, booking });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -155,39 +174,39 @@ router.put('/:id/confirm', protect, async (req, res) => {
 router.put('/:id/cancel', protect, async (req, res) => {
   try {
     const booking = await Booking.findById(req.params.id);
-    
+
     if (!booking) {
       return res.status(404).json({ message: 'Booking not found' });
     }
-    
+
     if (booking.user.toString() !== req.user._id.toString()) {
       return res.status(403).json({ message: 'Not authorized' });
     }
-    
+
     if (booking.status === 'completed' || booking.status === 'cancelled') {
       return res.status(400).json({ message: 'Cannot cancel this booking' });
     }
-    
+
     // Check if booking is within cancellation window (e.g., 24 hours before)
     const bookingTime = new Date(booking.bookingDate);
     const now = new Date();
     const hoursDifference = (bookingTime - now) / (1000 * 60 * 60);
-    
+
     if (hoursDifference < 24) {
-      return res.status(400).json({ 
-        message: 'Cannot cancel booking less than 24 hours before booking time' 
+      return res.status(400).json({
+        message: 'Cannot cancel booking less than 24 hours before booking time'
       });
     }
-    
+
     booking.status = 'cancelled';
     await booking.save();
-    
+
     // Free up the slots in turf
     const turf = await Turf.findById(booking.turf);
     const availability = turf.availability.find(
       a => new Date(a.date).toDateString() === new Date(booking.bookingDate).toDateString()
     );
-    
+
     if (availability) {
       booking.slots.forEach(slot => {
         const turfSlot = availability.slots.find(
@@ -200,7 +219,7 @@ router.put('/:id/cancel', protect, async (req, res) => {
       });
       await turf.save();
     }
-    
+
     // Send cancellation notification
     await Notification.create({
       user: req.user._id,
@@ -209,7 +228,45 @@ router.put('/:id/cancel', protect, async (req, res) => {
       message: `Your booking at ${turf.name} has been cancelled`,
       actionUrl: `/bookings`
     });
-    
+
+    res.json({ success: true, booking });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// @route   PUT /api/bookings/:id/confirm-payment
+// @desc    Confirm payment received (Turf Owner)
+// @access  Private (Turf Owner)
+router.put('/:id/confirm-payment', protect, async (req, res) => {
+  try {
+    const booking = await Booking.findById(req.params.id).populate('turf');
+
+    if (!booking) {
+      return res.status(404).json({ message: 'Booking not found' });
+    }
+
+    // Check if user is the turf owner
+    if (booking.turf.owner.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Not authorized to confirm this payment' });
+    }
+
+    if (booking.status !== 'pending') {
+      return res.status(400).json({ message: 'Booking is not in pending status' });
+    }
+
+    booking.status = 'confirmed';
+    await booking.save();
+
+    // Send confirmation notification to user
+    await Notification.create({
+      user: booking.user,
+      type: 'booking_confirmation',
+      title: 'Booking Confirmed',
+      message: `Your booking at ${booking.turf.name} has been confirmed by the turf owner`,
+      actionUrl: `/my-bookings`
+    });
+
     res.json({ success: true, booking });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -222,19 +279,19 @@ router.put('/:id/cancel', protect, async (req, res) => {
 router.get('/turf/:turfId', protect, async (req, res) => {
   try {
     const turf = await Turf.findById(req.params.turfId);
-    
+
     if (!turf) {
       return res.status(404).json({ message: 'Turf not found' });
     }
-    
+
     if (turf.owner.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
       return res.status(403).json({ message: 'Not authorized' });
     }
-    
+
     const bookings = await Booking.find({ turf: req.params.turfId })
       .populate('user', 'name email phone')
       .sort('-bookingDate');
-    
+
     res.json({ success: true, bookings });
   } catch (error) {
     res.status(500).json({ message: error.message });

@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { MapPin, Star, Clock } from 'lucide-react';
-import { getTurf, createBooking, createPaymentOrder, verifyPayment } from '../utils/api';
+import { getTurf, createBooking, createPaymentOrder, verifyPayment, updateTurfSlot } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
 import MockPaymentModal from '../components/MockPaymentModal';
 
@@ -18,6 +18,8 @@ const TurfDetails = () => {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [currentOrder, setCurrentOrder] = useState(null);
   const [currentBookingData, setCurrentBookingData] = useState(null);
+  const [isOwner, setIsOwner] = useState(false);
+  const [slotManagementMode, setSlotManagementMode] = useState(false);
 
   const fetchTurfDetails = useCallback(async () => {
     try {
@@ -35,14 +37,43 @@ const TurfDetails = () => {
     fetchTurfDetails();
   }, [fetchTurfDetails]);
 
+  useEffect(() => {
+    if (turf && user) {
+      setIsOwner(turf.owner === user._id);
+    }
+  }, [turf, user]);
+
   const handleSlotSelection = (slot) => {
-    if (slot.isBooked) return;
-    
+    if (slotManagementMode && isOwner) {
+      // Owner mode: toggle slot availability
+      handleSlotToggle(slot);
+      return;
+    }
+
+    const isMaintenance = turf.maintenanceDates?.includes(selectedDate);
+    if (slot.isBooked || isMaintenance) return;
+
     const slotKey = `${slot.startTime}-${slot.endTime}`;
     if (selectedSlots.includes(slotKey)) {
       setSelectedSlots(selectedSlots.filter(s => s !== slotKey));
     } else {
       setSelectedSlots([...selectedSlots, slotKey]);
+    }
+  };
+
+  const handleSlotToggle = async (slot) => {
+    try {
+      await updateTurfSlot(id, {
+        date: selectedDate,
+        startTime: slot.startTime,
+        endTime: slot.endTime,
+        isBooked: !slot.isBooked
+      });
+      // Refresh turf data
+      fetchTurfDetails();
+    } catch (error) {
+      console.error('Error updating slot:', error);
+      alert('Failed to update slot availability');
     }
   };
 
@@ -110,10 +141,11 @@ const TurfDetails = () => {
         paymentId: currentOrder.paymentId
       });
 
-      // Create booking
+      // Create booking with customer details
       await createBooking({
         ...currentBookingData,
-        paymentId: currentOrder.paymentId
+        paymentId: currentOrder.paymentId,
+        customerDetails: paymentData.customerDetails
       });
 
       setShowPaymentModal(false);
@@ -194,9 +226,28 @@ const TurfDetails = () => {
               type="date"
               value={selectedDate}
               onChange={(e) => setSelectedDate(e.target.value)}
-              className="w-full px-4 py-2 border dark:border-gray-600 rounded-lg dark:bg-gray-700"
+              className="w-full px-4 py-2 border dark:border-gray-600 rounded-lg dark:bg-gray-700 mb-4"
               min={new Date().toISOString().split('T')[0]}
             />
+            {isOwner && (
+              <div className="mt-4">
+                <button
+                  onClick={() => setSlotManagementMode(!slotManagementMode)}
+                  className={`w-full px-4 py-2 rounded-lg transition ${
+                    slotManagementMode
+                      ? 'bg-blue-500 text-white'
+                      : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+                  }`}
+                >
+                  {slotManagementMode ? 'Exit Management Mode' : 'Manage Slots'}
+                </button>
+                {slotManagementMode && (
+                  <p className="text-sm text-gray-500 mt-2">
+                    Click slots to mark as booked/unbooked for offline bookings
+                  </p>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
@@ -236,6 +287,18 @@ const TurfDetails = () => {
                     </button>
                   );
                 })}
+                {availableSlots.length > 0 && availableSlots.every(slot => slot.isBooked) && !turf.maintenanceDates?.includes(selectedDate) && (
+                  <div className="col-span-full text-center py-8">
+                    <div className="text-yellow-500 text-lg font-semibold mb-2">This date is fully booked</div>
+                    <div className="text-gray-500">Please select a different date</div>
+                  </div>
+                )}
+                {turf.maintenanceDates?.includes(selectedDate) && (
+                  <div className="col-span-full text-center py-8">
+                    <div className="text-yellow-500 text-lg font-semibold mb-2">This date is under maintenance</div>
+                    <div className="text-gray-500">Please select a different date</div>
+                  </div>
+                )}
               </div>
             ) : (
               <p className="text-gray-500">Please select a date to view available slots</p>
@@ -261,6 +324,22 @@ const TurfDetails = () => {
               {bookingLoading ? 'Processing...' : 'Book Now'}
             </button>
           </div>
+        </div>
+      )}
+
+      {/* Turf Owner Booking Details */}
+      {isOwner && (
+        <div className="mt-8 bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+          <h3 className="text-xl font-bold mb-4">Booking Details</h3>
+          <p className="text-gray-600 dark:text-gray-400 mb-4">
+            As the turf owner, you can view all bookings for this turf. Click the button below to see booking details.
+          </p>
+          <button
+            onClick={() => navigate(`/turfs/${id}/bookings`)}
+            className="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition"
+          >
+            View All Bookings
+          </button>
         </div>
       )}
 

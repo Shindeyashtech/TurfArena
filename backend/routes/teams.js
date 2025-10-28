@@ -32,9 +32,10 @@ router.post('/', protect, async (req, res) => {
 // @access  Public
 router.get('/', async (req, res) => {
   try {
-    const { city, lookingForPlayers, minRating, maxRating } = req.query;
-    
+    const { city, lookingForPlayers, minRating, maxRating, captain } = req.query;
+
     let query = { isActive: true };
+    if (captain) query.captain = captain;
     if (city) query['location.city'] = new RegExp(city, 'i');
     if (lookingForPlayers === 'true') query.lookingForPlayers = true;
     if (minRating || maxRating) {
@@ -42,12 +43,12 @@ router.get('/', async (req, res) => {
       if (minRating) query['statistics.teamRating'].$gte = Number(minRating);
       if (maxRating) query['statistics.teamRating'].$lte = Number(maxRating);
     }
-    
+
     const teams = await Team.find(query)
       .populate('captain', 'name avatar')
       .populate('members.user', 'name avatar stats')
       .sort('-statistics.teamRating');
-    
+
     res.json({ success: true, teams });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -126,6 +127,61 @@ router.delete('/:teamId/members/:userId', protect, async (req, res) => {
     await team.save();
     
     res.json({ success: true, team });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// @route   PUT /api/teams/:id
+// @desc    Update team
+// @access  Private (Captain only)
+router.put('/:id', protect, async (req, res) => {
+  try {
+    const team = await Team.findById(req.params.id);
+
+    if (!team) {
+      return res.status(404).json({ message: 'Team not found' });
+    }
+
+    if (team.captain.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'Only captain can update team' });
+    }
+
+    const { name, description, sport, skillLevel, maxMembers, minMembers, lookingForPlayers, location } = req.body;
+
+    if (name) team.name = name;
+    if (description !== undefined) team.description = description;
+    if (sport) team.sport = sport;
+    if (skillLevel) team.skillLevel = skillLevel;
+    if (maxMembers) team.maxMembers = maxMembers;
+    if (minMembers) team.minMembers = minMembers;
+    if (lookingForPlayers !== undefined) team.lookingForPlayers = lookingForPlayers;
+    if (location && location.city) team.location.city = location.city;
+
+    await team.save();
+    res.json({ success: true, team });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// @route   DELETE /api/teams/:id
+// @desc    Delete team
+// @access  Private (Captain only)
+router.delete('/:id', protect, async (req, res) => {
+  try {
+    const team = await Team.findById(req.params.id);
+
+    if (!team) {
+      return res.status(404).json({ message: 'Team not found' });
+    }
+
+    if (team.captain.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'Only captain can delete team' });
+    }
+
+    await Team.findByIdAndDelete(req.params.id);
+    res.json({ success: true, message: 'Team deleted successfully' });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

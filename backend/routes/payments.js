@@ -69,7 +69,7 @@ router.post('/verify', protect, async (req, res) => {
     // Update booking status if it's a booking payment
     if (payment.booking) {
       await Booking.findByIdAndUpdate(payment.booking, {
-        status: 'confirmed',
+        status: 'pending', // Keep as pending until turf owner confirms
         paymentId: payment._id
       });
     }
