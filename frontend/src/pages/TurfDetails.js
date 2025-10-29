@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { MapPin, Star, Clock } from 'lucide-react';
-import { getTurf, createBooking, createPaymentOrder, verifyPayment, updateTurfSlot } from '../utils/api';
+import { getTurf, createBooking, createPaymentOrder, verifyPayment } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
 import MockPaymentModal from '../components/MockPaymentModal';
 
@@ -19,7 +19,6 @@ const TurfDetails = () => {
   const [currentOrder, setCurrentOrder] = useState(null);
   const [currentBookingData, setCurrentBookingData] = useState(null);
   const [isOwner, setIsOwner] = useState(false);
-  const [slotManagementMode, setSlotManagementMode] = useState(false);
 
   const fetchTurfDetails = useCallback(async () => {
     try {
@@ -44,12 +43,6 @@ const TurfDetails = () => {
   }, [turf, user]);
 
   const handleSlotSelection = (slot) => {
-    if (slotManagementMode && isOwner) {
-      // Owner mode: toggle slot availability
-      handleSlotToggle(slot);
-      return;
-    }
-
     const isMaintenance = turf.maintenanceDates?.includes(selectedDate);
     if (slot.isBooked || isMaintenance) return;
 
@@ -58,22 +51,6 @@ const TurfDetails = () => {
       setSelectedSlots(selectedSlots.filter(s => s !== slotKey));
     } else {
       setSelectedSlots([...selectedSlots, slotKey]);
-    }
-  };
-
-  const handleSlotToggle = async (slot) => {
-    try {
-      await updateTurfSlot(id, {
-        date: selectedDate,
-        startTime: slot.startTime,
-        endTime: slot.endTime,
-        isBooked: !slot.isBooked
-      });
-      // Refresh turf data
-      fetchTurfDetails();
-    } catch (error) {
-      console.error('Error updating slot:', error);
-      alert('Failed to update slot availability');
     }
   };
 
@@ -231,21 +208,6 @@ const TurfDetails = () => {
             />
             {isOwner && (
               <div className="mt-4">
-                <button
-                  onClick={() => setSlotManagementMode(!slotManagementMode)}
-                  className={`w-full px-4 py-2 rounded-lg transition ${
-                    slotManagementMode
-                      ? 'bg-blue-500 text-white'
-                      : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
-                  }`}
-                >
-                  {slotManagementMode ? 'Exit Management Mode' : 'Manage Slots'}
-                </button>
-                {slotManagementMode && (
-                  <p className="text-sm text-gray-500 mt-2">
-                    Click slots to mark as booked/unbooked for offline bookings
-                  </p>
-                )}
               </div>
             )}
           </div>
@@ -335,7 +297,7 @@ const TurfDetails = () => {
             As the turf owner, you can view all bookings for this turf. Click the button below to see booking details.
           </p>
           <button
-            onClick={() => navigate(`/turfs/${id}/bookings`)}
+            onClick={() => navigate(`/turf-bookings/${id}`)}
             className="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition"
           >
             View All Bookings

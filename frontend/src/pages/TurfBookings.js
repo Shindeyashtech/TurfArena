@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
-import { Calendar, Clock, User, Phone, Mail, CheckCircle, XCircle, Download, Undo, FileText } from 'lucide-react';
+import { Calendar, Clock, User, Phone, Mail, CheckCircle, XCircle, Download, Undo, FileText, Plus } from 'lucide-react';
 import { getTurfBookings, confirmPayment, cancelBooking, getTurf } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
+import OfflineBookingModal from '../components/OfflineBookingModal';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
@@ -17,39 +18,13 @@ const TurfBookings = () => {
   const [showNewBookingPopup, setShowNewBookingPopup] = useState(false);
   const [newBooking, setNewBooking] = useState(null);
   const [turfDetails, setTurfDetails] = useState(null);
+  const [showOfflineBookingModal, setShowOfflineBookingModal] = useState(false);
 
-  useEffect(() => {
-    if (id) {
-      fetchBookings();
-    }
-  }, [id]); // Only refetch when turf ID changes
-
-  // Real-time booking notifications for turf owners
-  useEffect(() => {
-    if (socket && user?.role === 'turf_owner') {
-      socket.on('new-booking', (booking) => {
-        if (booking.turf === id || booking.turf._id === id) {
-          setNewBooking(booking);
-          setShowNewBookingPopup(true);
-          fetchBookings(); // Refresh the list
-          
-          // Auto-hide popup after 10 seconds
-          setTimeout(() => {
-            setShowNewBookingPopup(false);
-          }, 10000);
-        }
-      });
-
-      return () => {
-        socket.off('new-booking');
-      };
-    }
-  }, [socket, user, id]);
-  const fetchBookings = async () => {
+  const fetchBookings = useCallback(async () => {
     try {
       const res = await getTurfBookings(id);
       setBookings(res.data.bookings);
-      
+
       // Fetch turf details for PDF generation
       if (!turfDetails) {
         try {
@@ -64,7 +39,37 @@ const TurfBookings = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id, turfDetails]);
+
+  useEffect(() => {
+    if (id) {
+      fetchBookings();
+    }
+  }, [id, fetchBookings, user]);
+
+  // Real-time booking notifications for turf owners
+
+  useEffect(() => {
+    if (socket && user?.role === 'turf_owner') {
+      socket.on('new-booking', (booking) => {
+        if (booking.turf === id || booking.turf._id === id) {
+          setNewBooking(booking);
+          setShowNewBookingPopup(true);
+          fetchBookings(); // Refresh the list
+
+          // Auto-hide popup after 10 seconds
+          setTimeout(() => {
+            setShowNewBookingPopup(false);
+          }, 10000);
+        }
+      });
+
+      return () => {
+        socket.off('new-booking');
+      };
+    }
+  }, [socket, user, id, fetchBookings]);
+
   const handleConfirmPayment = async (bookingId) => {
     if (!window.confirm('Are you sure you want to confirm this payment?')) {
       return;
@@ -211,7 +216,6 @@ const TurfBookings = () => {
     const totalRevenue = filteredBookings.reduce((sum, b) => sum + (b.totalAmount || 0), 0);
     const confirmedBookings = filteredBookings.filter(b => b.status === 'confirmed').length;
     const pendingBookings = filteredBookings.filter(b => b.status === 'pending').length;
-    const cancelledBookings = filteredBookings.filter(b => b.status === 'cancelled').length;
 
     const summaryElement = document.createElement('div');
     summaryElement.style.width = '800px';
@@ -346,6 +350,19 @@ const TurfBookings = () => {
     }
   };
 
+  // Check if user is turf owner
+  if (user?.role !== 'turf_owner') {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="text-6xl mb-4">🔒</div>
+          <h2 className="text-2xl font-bold mb-4">Access Denied</h2>
+          <p className="text-gray-500">You don't have permission to view bookings for this turf.</p>
+        </div>
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -354,7 +371,7 @@ const TurfBookings = () => {
     );
   }
   return (
-    <div className="container mx-auto px-4 py-8">
+    <>
       {/* New Booking Popup for Turf Owners */}
       {showNewBookingPopup && newBooking && (
         <div className="fixed top-4 right-4 z-50 bg-white dark:bg-gray-800 rounded-lg shadow-2xl p-6 max-w-md border-l-4 border-green-500 animate-slide-in">
@@ -405,20 +422,37 @@ const TurfBookings = () => {
             View Details
           </button>
         </div>
-      )}      <div className="mb-8">
+      )}
+      <div className="container mx-auto px-4 py-8">
+        <div className="mb-8">
         <div className="flex justify-between items-center mb-4">
           <h1 className="text-3xl font-bold">Turf Bookings</h1>
-          
-          {/* Download Monthly Summary Button */}
-          {user?.role === 'turf_owner' && filteredBookings.length > 0 && (
-            <button
-              onClick={downloadMonthlySummary}
-              className="flex items-center px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition shadow-lg"
-            >
-              <FileText size={18} className="mr-2" />
-              Download Monthly Summary
-            </button>
-          )}
+
+          {/* Action Buttons */}
+          <div className="flex space-x-3">
+            {/* Create Offline Booking Button */}
+            {user && user.role === 'turf_owner' && (
+              <button
+                onClick={() => setShowOfflineBookingModal(true)}
+
+                className="flex items-center px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition shadow-lg"
+              >
+                <Plus size={18} className="mr-2" />
+                Create Offline Booking
+              </button>
+            )}
+
+            {/* Download Monthly Summary Button */}
+            {user?.role === 'turf_owner' && filteredBookings.length > 0 && (
+              <button
+                onClick={downloadMonthlySummary}
+                className="flex items-center px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition shadow-lg"
+              >
+                <FileText size={18} className="mr-2" />
+                Download Monthly Summary
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Filter Buttons */}
@@ -544,6 +578,14 @@ const TurfBookings = () => {
                         {booking.status}
                       </span>
                     </div>
+                    <div className="flex justify-between text-xs text-gray-500">
+                      <span>Payment:</span>
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        booking.paymentMethod === 'cash' ? 'bg-orange-100 text-orange-800' : 'bg-blue-100 text-blue-800'
+                      }`}>
+                        {booking.paymentMethod === 'cash' ? 'Cash' : 'Online'}
+                      </span>
+                    </div>
                   </div>
                 </div>                {/* Action Buttons for Turf Owners */}
                 {user?.role === 'turf_owner' && (
@@ -582,7 +624,20 @@ const TurfBookings = () => {
           ))}
         </div>
       )}
-    </div>
+
+      {/* Offline Booking Modal */}
+      {showOfflineBookingModal && (
+        <OfflineBookingModal
+          turfId={id}
+          onClose={() => setShowOfflineBookingModal(false)}
+          onBookingCreated={() => {
+            fetchBookings();
+            setShowOfflineBookingModal(false);
+          }}
+        />
+      )}
+      </div>
+    </>
   );
 };
 

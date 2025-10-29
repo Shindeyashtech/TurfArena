@@ -42,14 +42,11 @@ router.get('/', async (req, res) => {
         break;
     }
 
-    // Optimize query: Only select necessary fields, use lean() for better performance
     const turfs = await Turf.find(query)
-      .select('-availability -reviews') // Exclude heavy fields
       .sort(sortOption)
-      .limit(limit ? parseInt(limit) : 50) // Default limit to prevent huge queries
-      .lean(); // Convert to plain JS objects for better performance
+      .limit(limit ? parseInt(limit) : 0);
 
-    res.json({ turfs, count: turfs.length });
+    res.json(turfs);
   } catch (err) {
     console.error('Error fetching turfs:', err);
     res.status(500).json({ error: 'Failed to fetch turfs' });

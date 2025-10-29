@@ -311,6 +311,111 @@ router.put('/:id/confirm-payment', protect, async (req, res) => {
   }
 });
 
+// @route   POST /api/bookings/offline
+// @desc    Create offline booking (Turf Owner)
+// @access  Private (Turf Owner)
+router.post('/offline', protect, async (req, res) => {
+  try {
+    const { turf, bookingDate, slots, totalAmount, customerDetails, notes, isOffline } = req.body;
+
+    // Check if turf exists and user is the owner
+    const turfDoc = await Turf.findById(turf);
+    if (!turfDoc) {
+      return res.status(404).json({ message: 'Turf not found' });
+    }
+
+    if (turfDoc.owner.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Not authorized to create bookings for this turf' });
+    }
+
+    // Check if slots are available
+    const availability = turfDoc.availability.find(
+      a => new Date(a.date).toDateString() === new Date(bookingDate).toDateString()
+    );
+
+    if (!availability) {
+      return res.status(400).json({ message: 'No slots available for this date' });
+    }
+
+    // Verify all requested slots are available
+    for (const requestedSlot of slots) {
+      const turfSlot = availability.slots.find(
+        s => s.startTime === requestedSlot.startTime &&
+             s.endTime === requestedSlot.endTime
+      );
+
+      if (!turfSlot || turfSlot.isBooked) {
+        return res.status(400).json({
+          message: `Slot ${requestedSlot.startTime}-${requestedSlot.endTime} is not available`
+        });
+      }
+    }
+
+    // Create booking with confirmed status (since payment is offline)
+    const booking = await Booking.create({
+      user: req.user._id, // Turf owner as the user who created the booking
+      turf,
+      bookingDate,
+      slots,
+      totalAmount,
+      status: 'confirmed', // Offline bookings are confirmed immediately
+      customerDetails,
+      notes,
+      confirmedAt: new Date(),
+      paymentId: null, // No payment ID for offline bookings
+      paymentMethod: 'cash' // Payment method is cash for offline bookings
+    });
+
+    // Mark slots as booked
+    slots.forEach(requestedSlot => {
+      const turfSlot = availability.slots.find(
+        s => s.startTime === requestedSlot.startTime &&
+             s.endTime === requestedSlot.endTime
+      );
+      if (turfSlot) {
+        turfSlot.isBooked = true;
+        turfSlot.bookingId = booking._id;
+      }
+    });
+    await turfDoc.save();
+
+    // Send notification to turf owner (confirmation of booking creation)
+    await Notification.create({
+      user: req.user._id,
+      type: 'booking_confirmation',
+      title: 'Offline Booking Created',
+      message: `You created an offline booking for ${turfDoc.name} on ${new Date(bookingDate).toLocaleDateString()}`,
+      actionUrl: `/turf-bookings/${turf}`,
+      data: {
+        bookingId: booking._id,
+        turfId: turf,
+        customerName: customerDetails?.name || 'Walk-in Customer',
+        bookingDate: bookingDate,
+        totalAmount: totalAmount
+      }
+    });
+
+    // Emit real-time socket event to turf owner
+    const io = req.app.get('io');
+    if (io) {
+      io.to(req.user._id.toString()).emit('offline-booking-created', {
+        _id: booking._id,
+        turf: turf,
+        bookingDate: bookingDate,
+        slots: slots,
+        totalAmount: totalAmount,
+        customerDetails: customerDetails,
+        status: 'confirmed',
+        createdAt: booking.createdAt
+      });
+    }
+
+    res.status(201).json({ success: true, booking });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 // @route   GET /api/bookings/turf/:turfId
 // @desc    Get bookings for a specific turf (Turf Owner)
 // @access  Private (Turf Owner)

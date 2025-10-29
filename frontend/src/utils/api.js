@@ -4,18 +4,6 @@ import axios from 'axios';
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
 axios.defaults.baseURL = API_URL;
-axios.defaults.timeout = 10000; // 10 second timeout
-
-// Add response interceptor for better error handling
-axios.interceptors.response.use(
-  response => response,
-  error => {
-    if (error.code === 'ECONNABORTED') {
-      console.error('Request timeout');
-    }
-    return Promise.reject(error);
-  }
-);
 
 // Turfs
 export const getTurfs = (params) => axios.get('/api/turfs', { params });
@@ -28,6 +16,7 @@ export const addTurfReview = (id, data) => axios.post(`/api/turfs/${id}/reviews`
 
 // Bookings
 export const createBooking = (data) => axios.post('/api/bookings', data);
+export const createOfflineBooking = (data) => axios.post('/api/bookings/offline', data);
 export const getMyBookings = () => axios.get('/api/bookings/my');
 export const getTurfBookings = (turfId) => axios.get(`/api/bookings/turf/${turfId}`);
 export const cancelBooking = (id) => axios.put(`/api/bookings/${id}/cancel`);

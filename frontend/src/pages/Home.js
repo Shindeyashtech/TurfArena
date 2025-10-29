@@ -11,36 +11,24 @@ const Home = () => {
   const [featuredTurfs, setFeaturedTurfs] = useState([]);
   const [upcomingMatches, setUpcomingMatches] = useState([]);
   const [topPlayers, setTopPlayers] = useState([]);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchHomeData();
-  }, []); // Empty dependency array - run only once
+  }, []);
 
   const fetchHomeData = async () => {
     try {
-      setLoading(true);
-      
-      // Fetch data with error handling for each request
-      const results = await Promise.allSettled([
+      const [turfsRes, matchesRes, leaderboardRes] = await Promise.all([
         getTurfs({ sort: 'rating', limit: 3 }),
         getMatches({ status: 'scheduled', limit: 3 }),
         getLeaderboard({ type: 'rating', limit: 5 })
       ]);
 
-      if (results[0].status === 'fulfilled') {
-        setFeaturedTurfs(results[0].value.data.turfs || []);
-      }
-      if (results[1].status === 'fulfilled') {
-        setUpcomingMatches(results[1].value.data.matches || []);
-      }
-      if (results[2].status === 'fulfilled') {
-        setTopPlayers(results[2].value.data.leaderboard || []);
-      }
+      setFeaturedTurfs(turfsRes.data.turfs || []);
+      setUpcomingMatches(matchesRes.data.matches || []);
+      setTopPlayers(leaderboardRes.data.leaderboard || []);
     } catch (error) {
       console.error('Error fetching home data:', error);
-    } finally {
-      setLoading(false);
     }
   };
 

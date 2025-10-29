@@ -8,7 +8,6 @@ const cors = require('cors');
 const passport = require('passport');
 const socketIO = require('socket.io');
 const http = require('http');
-const compression = require('compression'); // Add compression
 const mongoURI = "mongodb+srv://yash_db_turf:yash_db_turf@turf.ouovq4d.mongodb.net/turfarena?retryWrites=true&w=majority&appName=turf";
 
 // Log environment variables to confirm
@@ -28,36 +27,28 @@ mongoose.connect(process.env.MONGO_URI, {
 .then(async () => {
   console.log('MongoDB Connected');
   
-  // Fix geo indexes on startup - only if needed (check first)
+  // Fix geo indexes on startup
   try {
     const db = mongoose.connection.db;
     
-    // Check if fix is needed before updating
-    const usersWithoutCoords = await db.collection('users').countDocuments(
-      { 'location.coordinates.coordinates': { $exists: false } }
+    // Update users with missing coordinates
+    await db.collection('users').updateMany(
+      { 'location.coordinates.coordinates': { $exists: false } },
+      { $set: { 'location.coordinates.coordinates': [0, 0] } }
     );
     
-    if (usersWithoutCoords > 0) {
-      await db.collection('users').updateMany(
-        { 'location.coordinates.coordinates': { $exists: false } },
-        { $set: { 'location.coordinates.coordinates': [0, 0] } }
-      );
-      console.log(`Fixed ${usersWithoutCoords} user coordinates`);
-    } else {
-      console.log('All user coordinates are valid');
-    }
+    console.log('Fixed user coordinates');
   } catch (error) {
-    console.log('Coordinates check error:', error.message);
+    console.log('Coordinates already fixed or error:', error.message);
   }
 })
 .catch(err => console.error('MongoDB connection error:', err));
 
 
 // Middleware
-app.use(compression()); // Enable gzip compression
 app.use(cors({ origin: process.env.FRONTEND_URL, credentials: true }));
-app.use(express.json({ limit: '10mb' })); // Add limit to prevent large payloads
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use(passport.initialize());
 app.use('/api/matchmaking', require('./routes/matchmaking'));
 

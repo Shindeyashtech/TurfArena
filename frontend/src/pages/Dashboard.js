@@ -8,31 +8,26 @@ import { useAuth } from '../context/AuthContext';
 import { getDashboardAnalytics, getTurfOwnerAnalytics } from '../utils/api';
 
 const Dashboard = () => {
-  const { user } = useAuth();  const [analytics, setAnalytics] = useState(null);
+  const { user } = useAuth();
+  const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
 
   useEffect(() => {
     fetchAnalytics();
-  }, []); // Empty dependency array - fetch only once on mount
+  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchAnalytics = async () => {
     try {
       setLoading(true);
-      setError(null);
       let res;
-      if (user?.role === 'admin') {
+      if (user.role === 'admin') {
         res = await getDashboardAnalytics();
-      } else if (user?.role === 'turf_owner') {
+      } else if (user.role === 'turf_owner') {
         res = await getTurfOwnerAnalytics();
-      } else {
-        setError('Unauthorized access');
-        return;
       }
       setAnalytics(res.data.analytics);
     } catch (error) {
       console.error('Error fetching analytics:', error);
-      setError('Failed to load analytics');
     } finally {
       setLoading(false);
     }
