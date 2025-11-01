@@ -140,23 +140,21 @@ npm install
 npm run dev 
 # Start the frontend 
 npm start 
-Frontend will typically run on 
-http://localhost:3000
+
+Frontend will typically run on http://localhost:3000
 Backend on http://localhost:5000
 
 🧩 Contribution Guide 
+
 Contributions are welcome! 
 Please read the CONTRIBUTING.md file for detailed steps on how to fork, branch, and submit a pull request.
+
 ⚖️ License 
 This project is licensed under the MIT License – feel free to use, modify, and distribute with attribution. 
 © 2025 TurfArena 
+
 📣 Acknowledgements
 MongoDB Atlas for scalable cloud database hosting 
 Razorpay for secure payment processing 
 Cloudinary for image management 
 The open-source community for inspiration and collaboration 
-
-> “TurfArena — Where the cricket community meets technology.” --- This README is structured for **visibility, professionalism, and growth**:
-> Includes badges and branding hooks for when you want to add them.
-> Communicates scalability and tech stack clearly.
-> Optimized for developer onboarding and contributor engagement.
