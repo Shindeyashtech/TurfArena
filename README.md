@@ -40,7 +40,7 @@ A comprehensive sports turf booking and management platform built with React, No
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/turfarena.git
+git clone https://github.com/Shindeyashtech/TurfArena.git
 cd turfarena
 ```
 
