@@ -1,6 +1,5 @@
-<!-- PROJECT BANNER -->
 <p align="center">
-  <img src="https://github.com/your-username/your-repo-name/assets/banner.png" alt="Project Banner" width="100%" />
+  <img src="frontend/src/pages/Screenshot 2025-11-01 142444.png" alt="Project Banner" width="100%" />
 </p>
 
 <h1 align="center">🏏 TurfArena — Cricket Turf Booking Platform</h1>
@@ -125,26 +124,96 @@ Empower every cricket enthusiast to play smarter, organize faster, and experienc
 - 📊 Machine Learning Analytics for player performance insights  
 
 ## 🧑‍💻 Setup & Installation
-bash 
-# Clone the repository 
-git clone //github.com/Shindeyashtech/TurfArena.git
-# Navigate into backend 
-cd turfarena/server 
-npm install 
-# Navigate into frontend 
-cd ../client 
-npm install 
-# Configure environment variables 
-# Create a .env file in both /server and /client folders with keys like: # MONGO_URI, JWT_SECRET, CLOUDINARY_API_KEY, RAZORPAY_KEY, etc.
+### Installation
 
-Start the backend server- 
-npm run dev 
-Start the frontend-
-npm start 
+1. Clone the repository:
+```bash
+git clone https://github.com/Shindeyashtech/TurfArena.git
+cd turfarena
+```
 
-Frontend will typically run on http://localhost:3000
-Backend on http://localhost:5000
+2. Install backend dependencies:
+```bash
+cd backend
+npm install
+```
 
+3. Install frontend dependencies:
+```bash
+cd ../frontend
+npm install
+```
+
+4. Set up environment variables:
+
+Copy the example environment files and configure them:
+
+```bash
+# Backend
+cp .env.example .env
+# Edit backend/.env with your configuration
+
+# Frontend
+cp .env.example .env
+# Edit frontend/.env with your configuration
+```
+
+5. Start the backend server:
+```bash
+cd backend
+npm start
+```
+
+6. Start the frontend development server:
+```bash
+cd frontend
+npm start
+```
+
+The application will be available at `http://localhost:3000`
+
+## Environment Variables
+
+### Backend (.env)
+- `MONGODB_URI`: MongoDB connection string
+- `PORT`: Server port (default: 5000)
+- `FRONTEND_URL`: Frontend URL for CORS
+- `JWT_SECRET`: Secret key for JWT tokens
+- `GOOGLE_CLIENT_ID`: Google OAuth client ID
+- `GOOGLE_CLIENT_SECRET`: Google OAuth client secret
+- `RAZORPAY_KEY_ID`: Razorpay key ID
+- `RAZORPAY_KEY_SECRET`: Razorpay key secret
+
+### Frontend (.env)
+- `REACT_APP_API_URL`: Backend API URL
+  
+## Project Structure
+
+```
+turfarena/
+├── backend/
+│   ├── config/          # Configuration files
+│   ├── controllers/     # Route controllers
+│   ├── middleware/      # Custom middleware
+│   ├── models/          # MongoDB models
+│   ├── routes/          # API routes
+│   ├── scripts/         # Utility scripts
+│   ├── socket/          # Socket.io handlers
+│   ├── utils/           # Utility functions
+│   └── server.js        # Main server file
+├── frontend/
+│   ├── public/          # Static assets
+│   ├── src/
+│   │   ├── components/  # Reusable components
+│   │   ├── context/     # React context providers
+│   │   ├── pages/       # Page components
+│   │   ├── utils/       # Utility functions
+│   │   └── App.js       # Main app component
+│   └── package.json
+├── .gitignore
+├── README.md
+└── package.json
+```
 # 🧩 Contribution Guide 
 
 Contributions are welcome! 
@@ -153,7 +222,8 @@ Please read the CONTRIBUTING.md file for detailed steps on how to fork, branch, 
 
 # ⚖️ License 
 
-This project is licensed under the MIT License – feel free to use, modify, and distribute with attribution. 
+This project is licensed under the MIT License – see the [LICENSE](LICENSE) file for details.
+feel free to use, modify, and distribute with attribution. 
 © 2025 TurfArena 
 
 # 📣 Acknowledgements
@@ -163,4 +233,4 @@ Razorpay for secure payment processing
 
 Cloudinary for image management 
 
-The open-source community for inspiration and collaboration 
+The open-source community for inspiration and collaboration
