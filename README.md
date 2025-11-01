@@ -127,7 +127,7 @@ Empower every cricket enthusiast to play smarter, organize faster, and experienc
 ## 🧑‍💻 Setup & Installation
 bash 
 # Clone the repository 
-git clone https://github.com/<your-username>/turfarena.git 
+git clone //github.com/Shindeyashtech/TurfArena.git
 # Navigate into backend 
 cd turfarena/server 
 npm install 
