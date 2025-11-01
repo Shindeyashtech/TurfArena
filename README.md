@@ -145,17 +145,22 @@ npm start
 Frontend will typically run on http://localhost:3000
 Backend on http://localhost:5000
 
-##🧩 Contribution Guide 
+# 🧩 Contribution Guide 
 
 Contributions are welcome! 
+
 Please read the CONTRIBUTING.md file for detailed steps on how to fork, branch, and submit a pull request.
 
-#⚖️ License 
+# ⚖️ License 
+
 This project is licensed under the MIT License – feel free to use, modify, and distribute with attribution. 
 © 2025 TurfArena 
 
-#📣 Acknowledgements
+# 📣 Acknowledgements
 MongoDB Atlas for scalable cloud database hosting 
+
 Razorpay for secure payment processing 
+
 Cloudinary for image management 
+
 The open-source community for inspiration and collaboration 
