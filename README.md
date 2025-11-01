@@ -145,7 +145,7 @@ npm start
 Frontend will typically run on http://localhost:3000
 Backend on http://localhost:5000
 
-#🧩 Contribution Guide 
+##🧩 Contribution Guide 
 
 Contributions are welcome! 
 Please read the CONTRIBUTING.md file for detailed steps on how to fork, branch, and submit a pull request.
