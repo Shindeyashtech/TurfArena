@@ -8,8 +8,8 @@ We’re excited that you’re interested in improving this project. This guide w
 - This creates your own copy of the repo under your account.
 - 2. **Clone your fork**    
 
-   git clone https://github.com/<your-username>/<repo-name>.git
-   cd <repo-name>
+   git clone https://github.com/your-username/repo-name.git
+   cd repo-name
 
 3. Create a new branch
 
