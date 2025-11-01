@@ -1,10 +1,12 @@
 # Contributing to <TurfArena> Welcome to the community! 
 We’re excited that you’re interested in improving this project. This guide will help you understand how to contribute effectively and responsibly.
 
-## 🚀 How to Contribute 1. 
-**Fork the repository**   
+## 🚀 How to Contribute
+1. **Fork the repository**   
 - Go to the project’s GitHub page and click **Fork**.
-- This creates your own copy of the repo under your account. 2. **Clone your fork**    
+  
+- This creates your own copy of the repo under your account.
+- 2. **Clone your fork**    
 
    git clone https://github.com/<your-username>/<repo-name>.git
    cd <repo-name>
@@ -30,7 +32,7 @@ Open a PR against the main branch of the original repo.
 Include a clear title and description of what your change does and why it’s needed.
 
 
-✅ Code Review Process
+# ✅ Code Review Process
 
 All changes must go through a Pull Request (PR) and review before merging:
 
@@ -41,7 +43,7 @@ No one (except maintainers) can push directly to main.
 PRs with breaking changes or new features must include documentation updates.
 
 
-🧩 Coding Guidelines
+# 🧩 Coding Guidelines
 
 Use meaningful commit messages (feat: add login component, fix: resolve null pointer error).
 
@@ -52,7 +54,7 @@ Avoid unnecessary dependencies.
 Test before submitting.
 
 
-🛡️ Code of Conduct
+# 🛡️ Code of Conduct
 
 We are committed to maintaining a respectful and inclusive community.
 Be kind, be constructive, and help others grow.
