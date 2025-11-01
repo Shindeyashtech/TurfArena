@@ -3,7 +3,7 @@
   <img src="https://github.com/your-username/your-repo-name/assets/banner.png" alt="Project Banner" width="100%" />
 </p>
 
-<h1 align="center">🏏 TurfArena — MERN-Based Cricket Turf Booking Platform</h1>
+<h1 align="center">🏏 TurfArena — Cricket Turf Booking Platform</h1>
 
 <p align="center">
   A full-stack cricket turf booking and team management platform built on the <b>MERN stack</b>.
