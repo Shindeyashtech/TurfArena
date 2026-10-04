@@ -4,6 +4,7 @@ import io from 'socket.io-client';
 import { useAuth } from './AuthContext';
 
 const SocketContext = createContext();
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
 export const useSocket = () => useContext(SocketContext);
 
@@ -14,7 +15,7 @@ export const SocketProvider = ({ children }) => {
   useEffect(() => {
     if (user) {
       const token = localStorage.getItem('token');
-      const newSocket = io(process.env.REACT_APP_API_URL || 'http://localhost:5000', {
+      const newSocket = io(API_URL, {
         auth: { token },
         transports: ['websocket', 'polling']
       });
