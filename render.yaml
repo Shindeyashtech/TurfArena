@@ -28,7 +28,6 @@ services:
   - type: web
     name: turfarena-frontend
     runtime: static
-    plan: free
     rootDir: frontend
     buildCommand: npm install && npm run build
     staticPublishPath: ./build
