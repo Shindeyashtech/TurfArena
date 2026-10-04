@@ -1,17 +1,12 @@
 const mongoose = require('mongoose');
 require('dotenv').config();
-console.log("Connecting to MongoDB:", process.env.MONGO_URI);
 
-// require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const passport = require('passport');
 const socketIO = require('socket.io');
 const http = require('http');
-const mongoURI = "mongodb+srv://yash_db_turf:yash_db_turf@turf.ouovq4d.mongodb.net/turfarena?retryWrites=true&w=majority&appName=turf";
 
-// Log environment variables to confirm
-console.log("Connecting to MongoDB:", process.env.MONGO_URI);
 
 
 
