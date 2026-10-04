@@ -199,6 +199,11 @@ router.put('/:id/complete', protect, async (req, res) => {
       return res.status(404).json({ message: 'Match not found' });
     }
     
+    if (match.matchType === 'lose-to-pay' &&
+        (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET)) {
+      return res.status(503).json({ message: 'Lose-to-pay requires Razorpay credentials.' });
+    }
+
     const { winner, margin, manOfTheMatch } = req.body;
     
     match.result = { winner, margin, manOfTheMatch };
